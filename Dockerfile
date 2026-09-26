@@ -38,25 +38,21 @@ WORKDIR /var/www/html
 COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
-# 4. Salin composer files terlebih dahulu untuk cache layer yang optimal
-COPY composer.json composer.lock ./
-
-# 5. Jalankan composer install
-RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs
-
-# 6. Salin sisa file project Laravel
+# 4. Salin seluruh source code termasuk vendor lokal jika sudah ada
 COPY . /var/www/html
 
-# 7. Set permission folder storage & cache
+# 5. Jalankan composer install dengan tambahan --no-scripts
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs
+
+# 6. Set permission folder storage & cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 8. Sesuaikan port untuk Render (10000)
+# 7. Sesuaikan port untuk Render (10000)
 ENV PORT=10000
 RUN sed -i -e 's/80/${PORT}/g' /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
 
-# 9. Jalankan clear cache, migrasi database, lalu start Apache
-CMD php artisan config:clear && \
-    php artisan cache:clear && \
+# 8. Jalankan clear cache, migrasi database Aiven, lalu start Apache
+CMD php artisan optimize:clear && \
     php artisan migrate --force && \
     apache2-foreground
