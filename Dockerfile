@@ -27,7 +27,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Tentukan working directory
 WORKDIR /var/www/html
 
-# Salin konfigurasi VirtualHost Apache kustom
+# Salin konfigurasi VirtualHost Apache kustom (sesuai path .docker/vhost.conf)
 COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 # Aktifkan modul mod_rewrite Apache untuk routing Laravel
@@ -36,8 +36,8 @@ RUN a2enmod rewrite
 # Salin seluruh file project ke dalam container
 COPY . /var/www/html
 
-# Install dependencies composer dengan batasan memori tidak terbatas
-RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction
+# Install dependencies composer dengan batasan memori tak terbatas & verbose untuk melacak error
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction --verbose || exit 1
 
 # Berikan izin akses (permission) ke folder storage dan bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
