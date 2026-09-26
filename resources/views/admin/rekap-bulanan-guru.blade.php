@@ -27,9 +27,30 @@
         .ttd-table { width: 100%; font-size: 11px; }
         .ttd-box { width: 45%; text-align: center; vertical-align: top; }
         .space-ttd { height: 60px; }
+
+        /* Style khusus untuk form filter di Web (tidak ikut tercetak di PDF) */
+        .web-filter-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .web-filter-box input { padding: 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; margin-right: 10px; }
+        .web-filter-box button, .web-filter-box a { padding: 8px 14px; background: #064e3b; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 11px; border: none; cursor: pointer; display: inline-block; }
+        .web-filter-box a { background: #0284c7; margin-left: 5px; }
     </style>
 </head>
 <body>
+
+    <!-- FORM FILTER RENTANG TANGGAL (Hanya tampil di Web, abaikan jika di PDF) -->
+    @if(!isset($isPdf))
+    <div class="web-filter-box">
+        <form method="GET" action="{{ route('admin.rekap.bulanan.guru') }}">
+            <label><strong>Dari:</strong></label>
+            <input type="date" name="start_date" value="{{ $startDate }}">
+            <label><strong>Sampai:</strong></label>
+            <input type="date" name="end_date" value="{{ $endDate }}">
+            <button type="submit">🔍 Filter Tanggal</button>
+            <a href="{{ route('admin.rekap.bulanan.guru.pdf', ['start_date' => $startDate, 'end_date' => $endDate]) }}">📥 Download PDF</a>
+            <a href="{{ route('admin.rekap') }}" style="background: #64748b;">← Kembali</a>
+        </form>
+    </div>
+    @endif
 
     <!-- KOP SURAT -->
     <div class="kop-surat">
