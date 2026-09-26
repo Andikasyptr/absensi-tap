@@ -144,10 +144,10 @@
             <tr>
                 <td class="ttd-box" style="text-align: left;">
                     <p>Mengetahui,</p>
-                    <p><strong>Kepala Sekolah{{ \App\Models\Setting::getVal('school_name', 'SMK Hijau Muda') }}</strong></p>
+                    <p><strong>Kepala Sekolah{{ \App\Models\Setting::getVal(' school_name', 'SMK Hijau Muda') }}</strong></p>
                     <div class="space-ttd"></div>
                     <p><strong><u>{{ \App\Models\Setting::getVal('headmaster_name', 'Kepala Sekolah') }}</u></strong></p>
-                    <p>NIP. {{ \App\Models\Setting::getVal('headmaster_nip', '-') }}</p>
+                    <p>NIP. - {{ \App\Models\Setting::getVal('headmaster_nip', '-') }}</p>
                 </td>
                 <td class="ttd-box" style="text-align: right;">
                     <p>Ditetapkan di : {{ \App\Models\Setting::getVal('city_location', 'Jakarta') }}</p>
