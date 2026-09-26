@@ -42,7 +42,8 @@ RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 ENV PORT=10000
 RUN sed -i -e 's/80/${PORT}/g' /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
 
-# Command otomatis untuk clear/optimize cache dan menjalankan Apache
-CMD php artisan config:cache && \
-    php artisan route:cache && \
+# Command otomatis untuk clear cache, migrasi database, dan menjalankan Apache
+CMD php artisan config:clear && \
+    php artisan cache:clear && \
+    php artisan migrate --force && \
     apache2-foreground
