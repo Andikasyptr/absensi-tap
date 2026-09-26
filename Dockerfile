@@ -1,20 +1,25 @@
-FROM php:8.2-apache
+FROM php:8.3-apache
 
-# Install dependencies sistem & ekstensi PHP yang dibutuhkan Laravel
+# Install dependencies sistem, ekstensi PHP, dan library font/image untuk Dompdf
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    libicu-dev \
+    libfontconfig1 \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
     zip \
     unzip
 
 # Clear cache apt
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install ekstensi PHP
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd opcache
+# Install ekstensi PHP yang dibutuhkan Laravel & Dompdf
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd opcache intl
 
 # Install Composer terbaru
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -31,8 +36,8 @@ RUN a2enmod rewrite
 # Salin seluruh file project ke dalam container
 COPY . /var/www/html
 
-# Install dependencies composer (Production mode)
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install dependencies composer dengan batasan memori tidak terbatas
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction
 
 # Berikan izin akses (permission) ke folder storage dan bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
