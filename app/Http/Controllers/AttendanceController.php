@@ -298,7 +298,7 @@ class AttendanceController extends Controller
             ];
         }
 
-        $pdf = Pdf::loadView('admin.rekap-bulanan-guru-pdf', compact(
+        $pdf = Pdf::loadView('admin.rekap-bulanan-guru', compact(
             'rekapPerGuru', 
             'startDate', 
             'endDate'
