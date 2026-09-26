@@ -53,7 +53,6 @@ ENV PORT=10000
 RUN sed -i -e 's/80/${PORT}/g' /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
 
 # 8. Jalankan clear cache, migrasi database Aiven, lalu start Apache
-CMD php artisan config:clear && \
-    php artisan cache:clear && \
+CMD php artisan optimize:clear && \
     php artisan migrate --force && \
     apache2-foreground
