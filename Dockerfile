@@ -1,6 +1,6 @@
 FROM php:8.3-apache
 
-# 1. Install sistem dependensi & ekstensi PHP
+# 1. Install sistem dependensi dasar & ekstensi wajib PHP 8.3 + Dompdf
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -29,25 +29,30 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         xml \
         xmlwriter
 
-# 2. Setup Working Directory
+# 2. Install Composer terbaru
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
 WORKDIR /var/www/html
 
 # 3. Konfigurasi Apache vhost
 COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
-# 4. Salin SELURUH project termasuk folder vendor lokal yang sudah jadi
+# 4. Salin seluruh source code termasuk vendor lokal jika sudah ada (supaya tidak perlu composer install di cloud jika sering timeout/gagal)
 COPY . /var/www/html
 
-# 5. Set permission folder storage & cache
+# 5. Jalankan composer install dengan aman (mengabaikan dev & lock mismatch jika ada)
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
+
+# 6. Set permission folder storage & cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 6. Sesuaikan port untuk Render (10000)
+# 7. Sesuaikan port untuk Render (10000)
 ENV PORT=10000
 RUN sed -i -e 's/80/${PORT}/g' /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
 
-# 7. Jalankan clear cache, migrasi database, lalu start Apache
+# 8. Jalankan clear cache, migrasi database Aiven, lalu start Apache
 CMD php artisan config:clear && \
     php artisan cache:clear && \
     php artisan migrate --force && \
