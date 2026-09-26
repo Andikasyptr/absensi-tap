@@ -38,11 +38,11 @@ WORKDIR /var/www/html
 COPY .docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
-# 4. Salin seluruh source code termasuk vendor lokal jika sudah ada (supaya tidak perlu composer install di cloud jika sering timeout/gagal)
+# 4. Salin seluruh source code termasuk vendor lokal jika sudah ada
 COPY . /var/www/html
 
-# 5. Jalankan composer install dengan aman (mengabaikan dev & lock mismatch jika ada)
-RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
+# 5. Jalankan composer install dengan tambahan --no-scripts
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs
 
 # 6. Set permission folder storage & cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
