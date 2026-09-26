@@ -12,11 +12,16 @@
             <h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Rekap Absensi Harian & Jam Mengajar</h2>
             <p class="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Laporan presensi lengkap dengan akumulasi jam mengajar guru otomatis.</p>
         </div>
-        <div class="flex gap-2">
-            <!-- Tombol Download Laporan PDF Resmi (Menggantikan Print Browser) -->
+        <div class="flex flex-wrap gap-2">
+            <!-- Tombol Menuju Rekap Periode / Bulanan Guru -->
+            <a href="{{ route('admin.rekap.bulanan.guru') }}" 
+               class="px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-sky-600/20 flex items-center gap-2">
+                <span>📊</span> Rekap Periode Guru (Bulanan)
+            </a>
+            <!-- Tombol Download Laporan PDF Harian -->
             <a :href="'{{ route('admin.rekap.pdf') }}?role=' + (activeTab === 'siswa' ? 'Siswa' : 'Guru') + '&date={{ $date }}&status={{ request('status') }}'" 
                class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
-                <span>📥</span> Download Laporan PDF Resmi
+                <span>📥</span> Download PDF Harian
             </a>
         </div>
     </div>
@@ -162,7 +167,6 @@
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     @forelse($attendances->where('attendable_type', App\Models\Teacher::class) as $data)
                     @php
-                        // Ambil jam mengajar otomatis dengan pengamanan null (mencegah error 500)
                         $jamMengajarHariIni = 0;
                         if ($data->attendable && method_exists($data->attendable, 'shifts')) {
                             $dayEnglish = \Carbon\Carbon::parse($data->date)->format('l');

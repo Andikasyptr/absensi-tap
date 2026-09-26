@@ -44,10 +44,10 @@
 
     <!-- KOP SURAT SEKOLAH -->
     <div class="kop-surat">
-        <h2>Yayasan Pendidikan SMK Hijau Muda</h2>
-        <h1>SMK Hijau Muda</h1>
-        <p>Portal Sistem Informasi Presensi Terpadu (SIFAT)</p>
-        <p>Alamat: Jl. Pendidikan No. 1, Kabupaten/Kota</p>
+        <h2>{{ \App\Models\Setting::getVal('school_foundation', 'Yayasan Pendidikan SMK Hijau Muda') }}</h2>
+        <h1>{{ \App\Models\Setting::getVal('school_name', 'SMK Hijau Muda') }}</h1>
+        <p>{{ \App\Models\Setting::getVal('school_tagline', 'Portal Sistem Informasi Presensi Terpadu (SIFAT)') }}</p>
+        <p>Alamat: {{ \App\Models\Setting::getVal('school_address', 'Jl. Pendidikan No. 1') }}</p>
     </div>
 
     <!-- JUDUL LAPORAN -->
@@ -138,19 +138,19 @@
         </tbody>
     </table>
 
-    <!-- TANDA TANGAN KEPALA SEKOLAH -->
+    <!-- TANDA TANGAN KEPALA SEKOLAH DINAMIS DARI DB -->
     <div class="ttd-container">
         <table class="ttd-table">
             <tr>
                 <td class="ttd-box" style="text-align: left;">
                     <p>Mengetahui,</p>
-                    <p><strong>Kepala SMK Hijau Muda</strong></p>
+                    <p><strong>Kepala {{ \App\Models\Setting::getVal('school_name', 'SMK Hijau Muda') }}</strong></p>
                     <div class="space-ttd"></div>
-                    <p><strong><u>Drs. Kepala Sekolah, M.Pd</u></strong></p>
-                    <p>NIP. 197001011995031001</p>
+                    <p><strong><u>{{ \App\Models\Setting::getVal('headmaster_name', 'Kepala Sekolah') }}</u></strong></p>
+                    <p>NIP. {{ \App\Models\Setting::getVal('headmaster_nip', '-') }}</p>
                 </td>
                 <td class="ttd-box" style="text-align: right;">
-                    <p>Ditetapkan di : Jakarta</p>
+                    <p>Ditetapkan di : {{ \App\Models\Setting::getVal('city_location', 'Jakarta') }}</p>
                     <p>Pada Tanggal : {{ $date }}</p>
                     <p><strong>Administrator / Petugas Piket</strong></p>
                     <div class="space-ttd"></div>

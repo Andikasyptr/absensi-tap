@@ -45,14 +45,14 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::delete('/student/{id}', [DataController::class, 'destroyStudent'])->name('student.destroy');
     Route::delete('/teacher/{id}', [DataController::class, 'destroyTeacher'])->name('teacher.destroy');
 
-    // Rekap Absensi
+    // Rekap Absensi Harian
     Route::get('/rekap', [AttendanceController::class, 'rekapIndex'])->name('rekap');
-    
-    // Route untuk Export / Download Laporan PDF Resmi (Kepala Sekolah)
     Route::get('/rekap/pdf', [AttendanceController::class, 'exportPdf'])->name('rekap.pdf');
-
-    // Route untuk Hapus Data Rekap Absensi
     Route::delete('/rekap/{id}', [AttendanceController::class, 'destroyRekap'])->name('rekap.destroy');
+
+    // Rekap Periode / Bulanan Guru & Akumulasi JP
+    Route::get('/rekap-bulanan-guru', [AttendanceController::class, 'rekapBulananGuru'])->name('rekap.bulanan.guru');
+    Route::get('/rekap-bulanan-guru/pdf', [AttendanceController::class, 'exportPdfBulananGuru'])->name('rekap.bulanan.guru.pdf');
 
     // Route Pengaturan Shift Harian Guru (Di-handle di DataController)
     Route::post('/shifts', [DataController::class, 'storeShift'])->name('shifts.store');

@@ -21,11 +21,10 @@ class AttendanceController extends Controller
     public function store(Request $request)
     {
         $uid = $request->uid;
-        $todayEnglish = date('l'); // Nama hari: Monday, Tuesday, dst.
+        $todayEnglish = date('l'); 
         $todayDate = Carbon::today()->toDateString();
         $currentTime = Carbon::now()->toTimeString();
 
-        // 1. Cek apakah kartu milik Siswa atau Guru
         $student = Student::where('rfid_uid', $uid)->first();
         $teacher = Teacher::where('rfid_uid', $uid)->with(['shifts' => function($query) use ($todayEnglish) {
             $query->where('day', $todayEnglish);
@@ -35,20 +34,17 @@ class AttendanceController extends Controller
             return response()->json(['message' => 'Kartu atau QR Code tidak dikenali!'], 404);
         }
 
-        // 2. Jika yang absen adalah GURU
         if ($teacher) {
             $todayShift = $teacher->shifts->first();
             $shiftStart = $todayShift ? $todayShift->shift_start : '07:30:00';
             $status = ($currentTime > $shiftStart) ? 'terlambat' : 'hadir';
 
-            // Cek apakah sudah ada absensi hari ini
             $attendance = Attendance::where('attendable_type', Teacher::class)
                 ->where('attendable_id', $teacher->id)
                 ->where('date', $todayDate)
                 ->first();
 
             if (!$attendance) {
-                // Belum absen -> Catat sebagai Masuk (time_in)
                 Attendance::create([
                     'attendable_type' => Teacher::class,
                     'attendable_id' => $teacher->id,
@@ -58,7 +54,6 @@ class AttendanceController extends Controller
                 ]);
                 $msg = "Absensi Masuk berhasil ($status).";
             } else if (!$attendance->time_out) {
-                // Sudah absen masuk tapi belum absen pulang -> Catat Pulang (time_out)
                 $attendance->update([
                     'time_out' => $currentTime
                 ]);
@@ -75,7 +70,6 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // 3. Jika yang absen adalah SISWA
         if ($student) {
             $standardShiftStart = '07:15:00';
             $status = ($currentTime > $standardShiftStart) ? 'terlambat' : 'hadir';
@@ -86,7 +80,6 @@ class AttendanceController extends Controller
                 ->first();
 
             if (!$attendance) {
-                // Catat Masuk
                 Attendance::create([
                     'attendable_type' => Student::class,
                     'attendable_id' => $student->id,
@@ -96,7 +89,6 @@ class AttendanceController extends Controller
                 ]);
                 $msg = "Absensi Masuk berhasil ($status).";
             } else if (!$attendance->time_out) {
-                // Catat Pulang
                 $attendance->update([
                     'time_out' => $currentTime
                 ]);
@@ -114,20 +106,18 @@ class AttendanceController extends Controller
         }
     }
 
-    // --- REKAP ABSENSI (AMAN DARI ERROR SHIFTS STUDENT) ---
+    // --- REKAP ABSENSI HARIAN ---
     public function rekapIndex(Request $request)
     {
         $date = $request->input('date', Carbon::today()->toDateString());
         $roleFilter = $request->input('role');
-        $statusFilter = $request->input('status'); // Filter status (hadir / terlambat)
+        $statusFilter = $request->input('status');
 
-        // Base query hanya meload attendable umum tanpa .shifts global
         $query = Attendance::with('attendable')->where('date', $date);
 
         if ($roleFilter == 'Siswa') {
             $query->where('attendable_type', Student::class);
         } elseif ($roleFilter == 'Guru') {
-            // Load shifts khusus jika yang difilter adalah guru
             $query->with('attendable.shifts');
             $query->where('attendable_type', Teacher::class);
         }
@@ -142,7 +132,6 @@ class AttendanceController extends Controller
         $totalSiswa = Attendance::where('date', $date)->where('attendable_type', Student::class)->count();
         $totalGuru = Attendance::where('date', $date)->where('attendable_type', Teacher::class)->count();
 
-        // Hitung akumulasi total jam mengajar guru dengan pengamanan ketat
         $totalJamGuruAll = 0;
         $guruAttendances = Attendance::with('attendable.shifts')
             ->where('attendable_type', Teacher::class)
@@ -171,7 +160,56 @@ class AttendanceController extends Controller
         ));
     }
 
-    // --- EXPORT LAPORAN KE PDF ---
+    // --- REKAP BULANAN / PERIODE GURU & AKUMULASI JAM MENGAJAR ---
+    public function rekapBulananGuru(Request $request)
+    {
+        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
+
+        $teachers = Teacher::with('shifts')->get();
+
+        $attendances = Attendance::where('attendable_type', Teacher::class)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->get();
+
+        $rekapPerGuru = [];
+
+        foreach ($teachers as $teacher) {
+            $teacherAttendances = $attendances->where('attendable_id', $teacher->id);
+            
+            $totalHadir = $teacherAttendances->where('status', 'hadir')->count();
+            $totalTerlambat = $teacherAttendances->where('status', 'terlambat')->count();
+            $totalHadirSemua = $totalHadir + $totalTerlambat;
+
+            $totalJamMengajar = 0;
+
+            foreach ($teacherAttendances as $att) {
+                if ($teacher->shifts) {
+                    $dayEnglish = Carbon::parse($att->date)->format('l');
+                    $shiftHariIni = $teacher->shifts->where('day', $dayEnglish)->first();
+                    if ($shiftHariIni && isset($shiftHariIni->total_hours)) {
+                        $totalJamMengajar += (int) $shiftHariIni->total_hours;
+                    }
+                }
+            }
+
+            $rekapPerGuru[] = [
+                'teacher' => $teacher,
+                'total_hadir' => $totalHadirSemua,
+                'tepat_waktu' => $totalHadir,
+                'terlambat' => $totalTerlambat,
+                'total_jp' => $totalJamMengajar,
+            ];
+        }
+
+        return view('admin.rekap-bulanan-guru', compact(
+            'rekapPerGuru', 
+            'startDate', 
+            'endDate'
+        ));
+    }
+
+    // --- EXPORT LAPORAN HARIAN KE PDF ---
     public function exportPdf(Request $request)
     {
         $date = $request->input('date', Carbon::today()->toDateString());
@@ -193,7 +231,6 @@ class AttendanceController extends Controller
 
         $attendances = $query->latest()->get();
 
-        // Akumulasi total jam mengajar guru khusus untuk cetak PDF dengan pengaman ketat
         $totalJamGuruAll = 0;
         if ($roleFilter == 'Guru') {
             foreach($attendances as $gat) {
@@ -218,6 +255,58 @@ class AttendanceController extends Controller
         $pdf->setPaper('a4', 'portrait');
 
         return $pdf->download('Laporan-Rekap-Absen-' . $roleFilter . '-' . $date . '.pdf');
+    }
+
+    // --- EXPORT PDF REKAP BULANAN/PERIODE GURU ---
+    public function exportPdfBulananGuru(Request $request)
+    {
+        $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', Carbon::now()->endOfMonth()->toDateString());
+
+        $teachers = Teacher::with('shifts')->get();
+        $attendances = Attendance::where('attendable_type', Teacher::class)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->get();
+
+        $rekapPerGuru = [];
+
+        foreach ($teachers as $teacher) {
+            $teacherAttendances = $attendances->where('attendable_id', $teacher->id);
+            
+            $totalHadir = $teacherAttendances->where('status', 'hadir')->count();
+            $totalTerlambat = $teacherAttendances->where('status', 'terlambat')->count();
+            $totalHadirSemua = $totalHadir + $totalTerlambat;
+
+            $totalJamMengajar = 0;
+
+            foreach ($teacherAttendances as $att) {
+                if ($teacher->shifts) {
+                    $dayEnglish = Carbon::parse($att->date)->format('l');
+                    $shiftHariIni = $teacher->shifts->where('day', $dayEnglish)->first();
+                    if ($shiftHariIni && isset($shiftHariIni->total_hours)) {
+                        $totalJamMengajar += (int) $shiftHariIni->total_hours;
+                    }
+                }
+            }
+
+            $rekapPerGuru[] = [
+                'teacher' => $teacher,
+                'total_hadir' => $totalHadirSemua,
+                'tepat_waktu' => $totalHadir,
+                'terlambat' => $totalTerlambat,
+                'total_jp' => $totalJamMengajar,
+            ];
+        }
+
+        $pdf = Pdf::loadView('admin.rekap-bulanan-guru-pdf', compact(
+            'rekapPerGuru', 
+            'startDate', 
+            'endDate'
+        ));
+
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->download('Laporan-Akumulasi-JP-Guru-' . $startDate . '_s_d_' . $endDate . '.pdf');
     }
 
     // Menghapus data rekap absensi
