@@ -162,13 +162,16 @@
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     @forelse($attendances->where('attendable_type', App\Models\Teacher::class) as $data)
                     @php
-                        // Ambil jam mengajar otomatis berdasarkan hari pada tanggal absensi
-                        $dayEnglish = \Carbon\Carbon::parse($data->date)->format('l');
-                        $teacherShift = $data->attendable->shifts->where('day', $dayEnglish)->first();
-                        $jamMengajarHariIni = $teacherShift->total_hours ?? 0;
+                        // Ambil jam mengajar otomatis dengan pengamanan null (mencegah error 500)
+                        $jamMengajarHariIni = 0;
+                        if ($data->attendable && method_exists($data->attendable, 'shifts')) {
+                            $dayEnglish = \Carbon\Carbon::parse($data->date)->format('l');
+                            $teacherShift = $data->attendable->shifts->where('day', $dayEnglish)->first();
+                            $jamMengajarHariIni = $teacherShift->total_hours ?? 0;
+                        }
                     @endphp
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                        <td class="p-4 font-bold text-slate-900 dark:text-white">{{ $data->attendable->name ?? '-' }}</td>
+                        <td class="p-4 font-bold text-slate-900 dark:text-white">{{ $data->attendable->name ?? 'Data Guru Terhapus' }}</td>
                         <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $data->time_in ?? '-' }}</td>
                         <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $data->time_out ?? '-' }}</td>
                         <td class="p-4 text-center">
