@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Laporan Resmi Rekapitulasi Presensi - {{ \App\Models\Setting::getVal('school_name') }}</title>
+    <title>Laporan Resmi Rekapitulasi Presensi</title>
     <style>
         body { font-family: 'Helvetica', 'Arial', sans-serif; color: #1e293b; font-size: 11px; line-height: 1.4; margin: 0; padding: 10px; }
         
@@ -42,12 +42,12 @@
 </head>
 <body>
 
-    <!-- KOP SURAT SEKOLAH DINAMIS DARI CMS -->
+    <!-- KOP SURAT SEKOLAH -->
     <div class="kop-surat">
-        <h2>{{ \App\Models\Setting::getVal('school_foundation', 'Yayasan Pendidikan') }}</h2>
-        <h1>{{ \App\Models\Setting::getVal('school_name', 'SMK Hijau Muda') }}</h1>
-        <p>{{ \App\Models\Setting::getVal('school_tagline') }}</p>
-        <p>Alamat: {{ \App\Models\Setting::getVal('school_address') }}</p>
+        <h2>Yayasan Pendidikan SMK Hijau Muda</h2>
+        <h1>SMK Hijau Muda</h1>
+        <p>Portal Sistem Informasi Presensi Terpadu (SIFAT)</p>
+        <p>Alamat: Jl. Pendidikan No. 1, Kabupaten/Kota</p>
     </div>
 
     <!-- JUDUL LAPORAN -->
@@ -101,7 +101,7 @@
             @forelse($attendances as $index => $data)
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
-                <td><strong>{{ $data->attendable->name ?? '-' }}</strong></td>
+                <td><strong>{{ $data->attendable->name ?? 'Data Terhapus' }}</strong></td>
                 @if($roleFilter == 'Siswa')
                 <td>{{ $data->attendable->class_name ?? '-' }}</td>
                 @else
@@ -118,9 +118,12 @@
                 </td>
                 @if($roleFilter == 'Guru')
                 @php
-                    $dayName = \Carbon\Carbon::parse($data->date)->format('l');
-                    $sShift = $data->attendable->shifts->where('day', $dayName)->first();
-                    $jp = $sShift->total_hours ?? 0;
+                    $jp = 0;
+                    if ($data->attendable && method_exists($data->attendable, 'shifts')) {
+                        $dayName = \Carbon\Carbon::parse($data->date)->format('l');
+                        $sShift = $data->attendable->shifts->where('day', $dayName)->first();
+                        $jp = $sShift->total_hours ?? 0;
+                    }
                 @endphp
                 <td class="text-center"><strong>+{{ $jp }} JP</strong></td>
                 @endif
@@ -135,19 +138,19 @@
         </tbody>
     </table>
 
-    <!-- TANDA TANGAN KEPALA SEKOLAH DINAMIS DARI CMS -->
+    <!-- TANDA TANGAN KEPALA SEKOLAH -->
     <div class="ttd-container">
         <table class="ttd-table">
             <tr>
                 <td class="ttd-box" style="text-align: left;">
                     <p>Mengetahui,</p>
-                    <p><strong>Kepala {{ \App\Models\Setting::getVal('school_name', 'SMK Hijau Muda') }}</strong></p>
+                    <p><strong>Kepala SMK Hijau Muda</strong></p>
                     <div class="space-ttd"></div>
-                    <p><strong><u>{{ \App\Models\Setting::getVal('headmaster_name') }}</u></strong></p>
-                    <p>{{ \App\Models\Setting::getVal('headmaster_nip') }}</p>
+                    <p><strong><u>Drs. Kepala Sekolah, M.Pd</u></strong></p>
+                    <p>NIP. 197001011995031001</p>
                 </td>
                 <td class="ttd-box" style="text-align: right;">
-                    <p>Ditetapkan di : {{ \App\Models\Setting::getVal('city_location', 'Jakarta') }}</p>
+                    <p>Ditetapkan di : Jakarta</p>
                     <p>Pada Tanggal : {{ $date }}</p>
                     <p><strong>Administrator / Petugas Piket</strong></p>
                     <div class="space-ttd"></div>
