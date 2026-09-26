@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Admin\DataController;
+use App\Http\Controllers\Admin\SettingController;
 
 // Halaman Utama / Welcome
 Route::get('/', function () {
@@ -47,9 +48,16 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     // Rekap Absensi
     Route::get('/rekap', [AttendanceController::class, 'rekapIndex'])->name('rekap');
     
+    // Route untuk Export / Download Laporan PDF Resmi (Kepala Sekolah)
+    Route::get('/rekap/pdf', [AttendanceController::class, 'exportPdf'])->name('rekap.pdf');
+
     // Route untuk Hapus Data Rekap Absensi
     Route::delete('/rekap/{id}', [AttendanceController::class, 'destroyRekap'])->name('rekap.destroy');
 
     // Route Pengaturan Shift Harian Guru (Di-handle di DataController)
     Route::post('/shifts', [DataController::class, 'storeShift'])->name('shifts.store');
+
+    // TAMBAHAN: Route CMS Pengaturan Kop Surat, Identitas Sekolah & Kepala Sekolah
+    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
 });

@@ -14,7 +14,7 @@ class DataController extends Controller
     public function index()
     {
         $students = Student::all();
-        // PERBAIKAN: Menggunakan with('shifts') agar data jam masuk harian guru ikut terpanggil
+        // Menggunakan with('shifts') agar data jam masuk & jumlah jam harian guru ikut terpanggil
         $teachers = Teacher::with('shifts')->get(); 
         
         return view('admin.data-index', compact('students', 'teachers'));
@@ -51,13 +51,14 @@ class DataController extends Controller
         return redirect()->route('admin.data.index')->with('success', 'Data guru berhasil disimpan.');
     }
 
-    // TAMBAHAN BARU: Simpan shift jam masuk harian berbeda untuk guru
+    // Simpan shift jam masuk harian & jumlah jam mengajar untuk guru
     public function storeShift(Request $request)
     {
         $request->validate([
             'teacher_id' => 'required|exists:teachers,id',
             'day' => 'required|string',
             'shift_start' => 'required',
+            'total_hours' => 'nullable|integer|min:1|max:12', // Validasi input jumlah jam (JP)
         ]);
 
         // Cek apakah guru sudah punya jadwal di hari yang sama, jika ada update, jika belum buat baru
@@ -69,10 +70,11 @@ class DataController extends Controller
             [
                 'shift_start' => $request->shift_start,
                 'shift_end' => $request->shift_end ?? null,
+                'total_hours' => $request->total_hours ?? null, // Simpan jumlah jam mengajar
             ]
         );
 
-        return redirect()->route('admin.data.index')->with('success', 'Shift harian guru berhasil diatur!');
+        return redirect()->route('admin.data.index')->with('success', 'Shift harian dan jumlah jam guru berhasil diatur!');
     }
 
     // Hapus data siswa
@@ -84,7 +86,7 @@ class DataController extends Controller
         return redirect()->route('admin.data.index')->with('success', 'Data siswa berhasil dihapus.');
     }
 
-    // Hapus data guru (otomatis menghapus relasi shift jika onDelete cascade)
+    // Hapus data guru (otomatis menghapus relasi shift)
     public function destroyTeacher($id)
     {
         $teacher = Teacher::findOrFail($id);

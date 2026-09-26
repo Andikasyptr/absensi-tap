@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Absensi Kiosk</title>
+    <title>Sistem Absensi Kiosk - SIFAT</title>
     <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Alpine.js untuk reaktivitas UI & Tabs -->
@@ -17,14 +17,14 @@
 
     <div class="max-w-md w-full bg-slate-800 p-8 rounded-3xl shadow-2xl text-center border border-slate-700">
         <h1 class="text-2xl font-bold mb-1">SIFAT (Sistem Absensi)</h1>
-        <p class="text-slate-400 text-sm mb-6">Pilih metode absensi di bawah ini</p>
+        <p class="text-slate-400 text-sm mb-6">Pilih metode absensi kartu chip atau QR Code</p>
 
         <!-- Pilihan Menu / Tab Mode -->
         <div class="grid grid-cols-2 gap-2 bg-slate-900 p-1.5 rounded-2xl mb-6 border border-slate-700/50">
-            <button @click="switchMode('tap')" 
-                    :class="mode === 'tap' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'"
+            <button @click="switchMode('chip')" 
+                    :class="mode === 'chip' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'"
                     class="py-2.5 rounded-xl font-bold text-xs transition">
-                ⚡ Tap Kartu / USB
+                💳 Tap Kartu Chip / USB
             </button>
             <button @click="switchMode('camera')" 
                     :class="mode === 'camera' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'"
@@ -40,14 +40,14 @@
              Silakan lakukan absensi...
         </div>
 
-        <!-- ================= MODE 1: TAP / USB SCANNER ================= -->
-        <div x-show="mode === 'tap'" class="py-4">
+        <!-- ================= MODE 1: CHIP / RFID / USB SCANNER ================= -->
+        <div x-show="mode === 'chip'" class="py-4">
             <div class="w-16 h-16 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border border-blue-500/20 animate-pulse">
                 💳
             </div>
-            <p class="text-xs text-slate-400">Silakan tap kartu RFID atau gunakan Barcode Scanner pada mesin.</p>
+            <p class="text-xs text-slate-400">Silakan tempelkan kartu RFID ber-chip atau gunakan USB Barcode Scanner pada mesin.</p>
             
-            <!-- Form tersembunyi untuk menangkap ketikan dari USB / Barcode Scanner -->
+            <!-- Form tersembunyi untuk menangkap ketikan dari perangkat keras secara otomatis -->
             <form @submit.prevent="submitData(uid)">
                 <input type="text" x-model="uid" id="rfid-input" class="opacity-0 absolute" autofocus autocomplete="off">
             </form>
@@ -63,9 +63,9 @@
     <script>
         function kioskApp() {
             return {
-                mode: 'tap',
+                mode: 'chip',
                 uid: '',
-                message: 'Menunggu kartu atau scan QR...',
+                message: 'Menunggu kartu chip atau scan QR...',
                 statusClass: 'bg-slate-700 text-slate-300 border border-slate-600',
                 html5QrCode: null,
                 lastScans: {}, 
@@ -78,9 +78,9 @@
                         window.speechSynthesis.onvoiceschanged = () => this.loadVoices();
                     }
 
-                    // Penjaga fokus input otomatis
+                    // Penjaga fokus input otomatis agar USB/RFID Reader selalu siap tanpa perlu diklik
                     setInterval(() => {
-                        if (this.mode === 'tap') {
+                        if (this.mode === 'chip') {
                             let input = document.getElementById('rfid-input');
                             if (input && document.activeElement !== input) {
                                 input.focus();
@@ -167,7 +167,6 @@
                         // Cari suara bahasa Indonesia terbaik yang tersedia di perangkat (utamakan Google / Natural jika ada)
                         let indonesianVoices = this.voices.filter(v => v.lang.includes('id') || v.lang.includes('ID'));
                         if (indonesianVoices.length > 0) {
-                            // Prioritaskan suara perempuan atau suara berlabel natural/google jika tersedia
                             let selectedVoice = indonesianVoices.find(v => v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('female')) || indonesianVoices[0];
                             utterance.voice = selectedVoice;
                         }
@@ -180,7 +179,7 @@
                     if (!codeValue) return;
 
                     let now = new Date().getTime();
-                    let cooldownTime = 30 * 60 * 1000; // 30 menit
+                    let cooldownTime = 30 * 60 * 1000; // 30 menit cooldown
 
                     if (this.lastScans[codeValue]) {
                         let elapsed = now - this.lastScans[codeValue];
@@ -194,7 +193,7 @@
                         }
                     }
 
-                    // Kirim ke backend Laravel
+                    // Kirim data ke backend Laravel (/api/tap)
                     axios.post('/api/tap', { uid: codeValue })
                         .then(response => {
                             let res = response.data;
@@ -215,7 +214,7 @@
 
                             // Bunyikan beep error
                             this.playBeep(false);
-                            this.speak("Maaf, kartu atau kode QR tidak terdaftar di sistem.");
+                            this.speak("Maaf, kartu atau kode tidak terdaftar di sistem.");
                         });
                 }
             }

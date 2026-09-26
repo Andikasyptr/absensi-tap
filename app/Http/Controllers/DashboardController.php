@@ -10,32 +10,46 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request)
+   public function index(Request $request)
     {
-        // Ambil tanggal dari parameter URL (?date=YYYY-MM-DD), jika kosong gunakan hari ini
+        // Ambil tanggal dari filter, default hari ini
         $selectedDate = $request->input('date', Carbon::today()->toDateString());
 
-        // Hitung total master data siswa & guru
+        // Total siswa & guru terdaftar
         $totalSiswaCount = Student::count();
         $totalGuruCount = Teacher::count();
 
-        // Ambil data absensi berdasarkan tanggal yang dipilih
-        $attendancesOnDate = Attendance::whereDate('date', $selectedDate)->get();
+        // Data absensi pada tanggal tersebut
+        $attendances = Attendance::where('date', $selectedDate)->get();
 
-        // Hitung statistik kehadiran pada tanggal tersebut
-        $totalHadir = $attendancesOnDate->count();
-        $siswaHadir = $attendancesOnDate->where('attendable_type', Student::class)->count();
-        $guruHadir = $attendancesOnDate->where('attendable_type', Teacher::class)->count();
-        $totalTerlambat = $attendancesOnDate->where('status', 'terlambat')->count();
+        // Hitung total kehadiran
+        $totalHadir = $attendances->count();
+        $siswaHadir = $attendances->where('attendable_type', Student::class)->count();
+        $guruHadir = $attendances->where('attendable_type', Teacher::class)->count();
+
+        // 🔍 HITUNG KETERLAMBATAN TERPISAH
+        $siswaTerlambat = Attendance::where('date', $selectedDate)
+            ->where('attendable_type', Student::class)
+            ->where('status', 'terlambat')
+            ->count();
+
+        $guruTerlambat = Attendance::where('date', $selectedDate)
+            ->where('attendable_type', Teacher::class)
+            ->where('status', 'terlambat')
+            ->count();
+
+        $totalTerlambat = $siswaTerlambat + $guruTerlambat;
 
         return view('admin.dashboard', compact(
-            'totalSiswaCount',
-            'totalGuruCount',
+            'selectedDate',
             'totalHadir',
             'siswaHadir',
             'guruHadir',
-            'totalTerlambat',
-            'selectedDate'
+            'totalSiswaCount',
+            'totalGuruCount',
+            'siswaTerlambat',
+            'guruTerlambat',
+            'totalTerlambat'
         ));
     }
 }
