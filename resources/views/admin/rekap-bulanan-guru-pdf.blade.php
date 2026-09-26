@@ -37,20 +37,6 @@
 </head>
 <body>
 
-    <!-- FORM FILTER RENTANG TANGGAL (Hanya tampil di Web, abaikan jika di PDF) -->
-    @if(!isset($isPdf))
-    <div class="web-filter-box">
-        <form method="GET" action="{{ route('admin.rekap.bulanan.guru') }}">
-            <label><strong>Dari:</strong></label>
-            <input type="date" name="start_date" value="{{ $startDate }}">
-            <label><strong>Sampai:</strong></label>
-            <input type="date" name="end_date" value="{{ $endDate }}">
-            <button type="submit">🔍 Filter Tanggal</button>
-            <a href="{{ route('admin.rekap.bulanan.guru.pdf', ['start_date' => $startDate, 'end_date' => $endDate]) }}">📥 Download PDF</a>
-            <a href="{{ route('admin.rekap') }}" style="background: #64748b;">← Kembali</a>
-        </form>
-    </div>
-    @endif
 
     <!-- KOP SURAT -->
     <div class="kop-surat">
@@ -116,7 +102,7 @@
             <tr>
                 <td class="ttd-box" style="text-align: left;">
                     <p>Mengetahui,</p>
-                    <p><strong>Kepala Sekolah{{ \App\Models\Setting::getVal(' school_name', 'SMK Hijau Muda') }}</strong></p>
+                    <p><strong>Kepala Sekolah {{ \App\Models\Setting::getVal(' school_name', ' SMK Hijau Muda') }}</strong></p>
                     <div class="space-ttd"></div>
                     <p><strong><u>{{ \App\Models\Setting::getVal('headmaster_name', 'Kepala Sekolah') }}</u></strong></p>
                     <p>NIP. {{ \App\Models\Setting::getVal('headmaster_nip', '-') }}</p>
