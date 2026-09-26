@@ -114,7 +114,7 @@ class AttendanceController extends Controller
         }
     }
 
-    // --- REKAP ABSENSI ---
+    // --- REKAP ABSENSI (DIAMANKAN TOTAL) ---
     public function rekapIndex(Request $request)
     {
         $date = $request->input('date', Carbon::today()->toDateString());
@@ -139,7 +139,7 @@ class AttendanceController extends Controller
         $totalSiswa = Attendance::where('date', $date)->where('attendable_type', Student::class)->count();
         $totalGuru = Attendance::where('date', $date)->where('attendable_type', Teacher::class)->count();
 
-        // Hitung akumulasi total jam mengajar guru pada tanggal tersebut
+        // Hitung akumulasi total jam mengajar guru dengan pengamanan ketat
         $totalJamGuruAll = 0;
         $guruAttendances = Attendance::with('attendable.shifts')
             ->where('attendable_type', Teacher::class)
@@ -147,11 +147,11 @@ class AttendanceController extends Controller
             ->get();
 
         foreach($guruAttendances as $gat) {
-            if ($gat->attendable) {
+            if ($gat->attendable && method_exists($gat->attendable, 'shifts')) {
                 $dayName = Carbon::parse($gat->date)->format('l');
                 $shiftHariIni = $gat->attendable->shifts->where('day', $dayName)->first();
-                if ($shiftHariIni && $shiftHariIni->total_hours) {
-                    $totalJamGuruAll += $shiftHariIni->total_hours;
+                if ($shiftHariIni && isset($shiftHariIni->total_hours)) {
+                    $totalJamGuruAll += (int) $shiftHariIni->total_hours;
                 }
             }
         }
@@ -189,15 +189,15 @@ class AttendanceController extends Controller
 
         $attendances = $query->latest()->get();
 
-        // Akumulasi total jam mengajar guru khusus untuk cetak PDF
+        // Akumulasi total jam mengajar guru khusus untuk cetak PDF dengan pengaman ketat
         $totalJamGuruAll = 0;
         if ($roleFilter == 'Guru') {
             foreach($attendances as $gat) {
-                if ($gat->attendable) {
+                if ($gat->attendable && method_exists($gat->attendable, 'shifts')) {
                     $dayName = Carbon::parse($gat->date)->format('l');
                     $shiftHariIni = $gat->attendable->shifts->where('day', $dayName)->first();
-                    if ($shiftHariIni && $shiftHariIni->total_hours) {
-                        $totalJamGuruAll += $shiftHariIni->total_hours;
+                    if ($shiftHariIni && isset($shiftHariIni->total_hours)) {
+                        $totalJamGuruAll += (int) $shiftHariIni->total_hours;
                     }
                 }
             }
