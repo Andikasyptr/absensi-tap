@@ -114,18 +114,21 @@ class AttendanceController extends Controller
         }
     }
 
-    // --- REKAP ABSENSI (DIAMANKAN TOTAL) ---
+    // --- REKAP ABSENSI (AMAN DARI ERROR SHIFTS STUDENT) ---
     public function rekapIndex(Request $request)
     {
         $date = $request->input('date', Carbon::today()->toDateString());
         $roleFilter = $request->input('role');
         $statusFilter = $request->input('status'); // Filter status (hadir / terlambat)
 
-        $query = Attendance::with('attendable.shifts')->where('date', $date);
+        // Base query hanya meload attendable umum tanpa .shifts global
+        $query = Attendance::with('attendable')->where('date', $date);
 
         if ($roleFilter == 'Siswa') {
             $query->where('attendable_type', Student::class);
         } elseif ($roleFilter == 'Guru') {
+            // Load shifts khusus jika yang difilter adalah guru
+            $query->with('attendable.shifts');
             $query->where('attendable_type', Teacher::class);
         }
 
@@ -175,11 +178,12 @@ class AttendanceController extends Controller
         $roleFilter = $request->input('role', 'Siswa');
         $statusFilter = $request->input('status');
 
-        $query = Attendance::with('attendable.shifts')->where('date', $date);
+        $query = Attendance::with('attendable')->where('date', $date);
 
         if ($roleFilter == 'Siswa') {
             $query->where('attendable_type', Student::class);
         } elseif ($roleFilter == 'Guru') {
+            $query->with('attendable.shifts');
             $query->where('attendable_type', Teacher::class);
         }
 
