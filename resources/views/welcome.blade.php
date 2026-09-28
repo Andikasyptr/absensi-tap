@@ -123,7 +123,7 @@
     <footer class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3 text-center sm:text-left">
         <p>&copy; 2026 SIFAT - SMK Hijau Muda. Hak Cipta Dilindungi.</p>
         <p>
-            Developed BY
+            Developed by
             <a href="https://web-portofolio-me.netlify.app/" target="_blank" class="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
                 Muhammad Andika Anjas S.Kom.
             </a>
