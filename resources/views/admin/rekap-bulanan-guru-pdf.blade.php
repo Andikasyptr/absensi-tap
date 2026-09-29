@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Laporan Akumulasi Jam Mengajar Guru</title>
+    <title>Laporan Akumulasi Jam Mengajar Guru & Staf TU</title>
     <style>
         body { font-family: 'Helvetica', 'Arial', sans-serif; color: #1e293b; font-size: 11px; line-height: 1.4; margin: 0; padding: 10px; }
         .kop-surat { width: 100%; border-bottom: 3px double #0f172a; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
@@ -27,16 +27,9 @@
         .ttd-table { width: 100%; font-size: 11px; }
         .ttd-box { width: 45%; text-align: center; vertical-align: top; }
         .space-ttd { height: 60px; }
-
-        /* Style khusus untuk form filter di Web (tidak ikut tercetak di PDF) */
-        .web-filter-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .web-filter-box input { padding: 8px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 4px; margin-right: 10px; }
-        .web-filter-box button, .web-filter-box a { padding: 8px 14px; background: #064e3b; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 11px; border: none; cursor: pointer; display: inline-block; }
-        .web-filter-box a { background: #0284c7; margin-left: 5px; }
     </style>
 </head>
 <body>
-
 
     <!-- KOP SURAT -->
     <div class="kop-surat">
@@ -48,7 +41,7 @@
 
     <!-- JUDUL -->
     <div class="judul-laporan">
-        <h3>Laporan Akumulasi Jam Mengajar Guru (Periode Kustom)</h3>
+        <h3>Laporan Akumulasi Kehadiran Guru & Staf Tenaga Kependidikan (TU)</h3>
         <p>Rentang Tanggal: {{ $startDate }} s.d {{ $endDate }}</p>
     </div>
 
@@ -56,8 +49,8 @@
     <table class="meta-table">
         <tr>
             <td width="20%"><strong>Kategori</strong></td>
-            <td width="30%">: Akumulasi Beban Mengajar Guru</td>
-            <td width="25%"><strong>Total Guru</strong></td>
+            <td width="30%">: Akumulasi Kehadiran & JP Guru/TU</td>
+            <td width="25%"><strong>Total Pegawai</strong></td>
             <td width="25%">: {{ count($rekapPerGuru) }} Orang</td>
         </tr>
         <tr>
@@ -70,10 +63,11 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th width="8%" class="text-center">No</th>
-                <th width="42%">Nama & Gelar Guru</th>
-                <th width="15%" class="text-center">Total Hadir</th>
-                <th width="15%" class="text-center">Tepat Waktu</th>
+                <th width="6%" class="text-center">No</th>
+                <th width="34%">Nama & Gelar</th>
+                <th width="15%" class="text-center">Peran / Jabatan</th>
+                <th width="12%" class="text-center">Total Hadir</th>
+                <th width="13%" class="text-center">Tepat Waktu</th>
                 <th width="20%" class="text-center">Akumulasi Jam (JP)</th>
             </tr>
         </thead>
@@ -81,15 +75,28 @@
             @forelse($rekapPerGuru as $index => $data)
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
-                <td><strong>{{ $data['teacher']->name }}</strong></td>
+                <td><strong>{{ $data['person']->name }}</strong></td>
+                <td class="text-center">
+                    @if($data['role_type'] == 'Guru')
+                        <span style="color: #064e3b; font-weight: bold;">GURU</span>
+                    @else
+                        <span style="color: #0284c7; font-weight: bold;">{{ $data['person']->position ?? 'STAF TU' }}</span>
+                    @endif
+                </td>
                 <td class="text-center">{{ $data['total_hadir'] }} Hari</td>
                 <td class="text-center">{{ $data['tepat_waktu'] }}</td>
-                <td class="text-center"><strong>+{{ $data['total_jp'] }} JP</strong></td>
+                <td class="text-center">
+                    @if($data['role_type'] == 'Guru')
+                        <strong>+{{ $data['total_jp'] }} JP</strong>
+                    @else
+                        <span style="color: #64748b;">0 JP</span>
+                    @endif
+                </td>
             </tr>
             @empty
             <tr>
-                <td colspan="5" class="text-center" style="padding: 15px; color: #64748b;">
-                    Tidak ada data rekapitulasi guru pada periode ini.
+                <td colspan="6" class="text-center" style="padding: 15px; color: #64748b;">
+                    Tidak ada data rekapitulasi pada periode ini.
                 </td>
             </tr>
             @endforelse
