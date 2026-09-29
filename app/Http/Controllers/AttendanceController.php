@@ -116,8 +116,14 @@ class AttendanceController extends Controller
 
         $dayEnglish = Carbon::parse($date)->format('l');
 
-        // 1. Ambil daftar kelas untuk dropdown filter siswa
-        $classList = Student::select('class_name')->distinct()->orderBy('class_name')->pluck('class_name');
+        // 1. Ambil daftar kelas secara unik (tanpa duplikasi nama kelas) untuk dropdown filter
+        $classList = Student::select('class_name')
+            ->whereNotNull('class_name')
+            ->distinct()
+            ->orderBy('class_name')
+            ->pluck('class_name')
+            ->unique()
+            ->values();
 
         // 2. Logika Rekap Siswa (Semua Siswa Terdaftar)
         $studentRecaps = [];
@@ -409,13 +415,10 @@ class AttendanceController extends Controller
             ];
         }
 
-        $isPdf = true;
-
-        $pdf = Pdf::loadView('admin.rekap-bulanan-guru', compact(
+        $pdf = Pdf::loadView('admin.rekap-bulanan-guru-pdf', compact(
             'rekapPerGuru', 
             'startDate', 
-            'endDate',
-            'isPdf'
+            'endDate'
         ));
 
         $pdf->setPaper('a4', 'portrait');
