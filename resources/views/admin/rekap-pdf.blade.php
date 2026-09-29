@@ -32,6 +32,7 @@
         .badge { padding: 2px 5px; border-radius: 3px; font-size: 8px; font-weight: bold; text-transform: uppercase; display: inline-block; }
         .badge-hadir { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
         .badge-terlambat { background-color: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+        .badge-alpha { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
         /* Bagian Tanda Tangan */
         .ttd-container { width: 100%; margin-top: 30px; page-break-inside: avoid; }
@@ -52,7 +53,7 @@
 
     <!-- JUDUL LAPORAN -->
     <div class="judul-laporan">
-        <h3>Laporan Resmi Rekapitulasi Presensi {{ $roleFilter == 'Guru' ? '& Beban Mengajar' : '' }}</h3>
+        <h3>Laporan Resmi Rekapitulasi Presensi {{ $roleFilter == 'Guru' ? 'Guru Terjadwal & Beban Mengajar' : 'Siswa Terdaftar' }}</h3>
         <p>Periode Tanggal: {{ $date }}</p>
     </div>
 
@@ -60,83 +61,106 @@
     <table class="meta-table">
         <tr>
             <td width="20%"><strong>Kategori</strong></td>
-            <td width="30%">: Rekapitulasi {{ $roleFilter ?? 'Siswa' }}</td>
-            <td width="25%"><strong>Total Kehadiran</strong></td>
-            <td width="25%">: {{ $attendances->count() }} Orang</td>
+            <td width="30%">: Rekapitulasi {{ $roleFilter }}</td>
+            <td width="25%"><strong>Total Data</strong></td>
+            <td width="25%">: {{ $roleFilter == 'Siswa' ? count($studentRecaps ?? []) . ' Siswa' : count($teacherRecaps ?? []) . ' Guru' }}</td>
         </tr>
         <tr>
             <td><strong>Status Filter</strong></td>
-            <td>: {{ $statusFilter ? ucfirst(str_replace('_', ' ', $statusFilter)) : 'Semua Status (Tepat Waktu & Terlambat)' }}</td>
+            <td>: {{ $statusFilter ? ucfirst(str_replace('_', ' ', $statusFilter)) : 'Semua Status' }}</td>
             <td><strong>Tanggal Cetak</strong></td>
             <td>: {{ date('d-m-Y H:i') }} WIB</td>
         </tr>
         @if($roleFilter == 'Guru')
         <tr>
             <td><strong>Akumulasi Beban</strong></td>
-            <td colspan="3">: <strong>{{ $totalJamGuruAll ?? 0 }} Jam (JP)</strong> total akumulasi mengajar seluruh guru pada tanggal ini.</td>
+            <td colspan="3">: <strong>{{ $totalJamGuruAll ?? 0 }} Jam (JP)</strong> total akumulasi mengajar guru yang hadir pada tanggal ini.</td>
         </tr>
         @endif
     </table>
 
     <!-- TABEL DATA ABSENSI -->
+    @if($roleFilter == 'Siswa')
     <table class="data-table">
         <thead>
             <tr>
                 <th width="5%">No</th>
-                <th width="32%">Nama Lengkap {{ $roleFilter == 'Guru' ? '& Gelar' : '' }}</th>
-                @if($roleFilter == 'Siswa')
+                <th width="42%">Nama Lengkap Siswa</th>
                 <th width="20%">Kelas / Rombel</th>
-                @else
-                <th width="20%">Kategori Pegawai</th>
-                @endif
                 <th width="13%" class="text-center">Jam Masuk</th>
                 <th width="13%" class="text-center">Jam Pulang</th>
                 <th width="12%" class="text-center">Status</th>
-                @if($roleFilter == 'Guru')
-                <th width="15%" class="text-center">Jam Mengajar</th>
-                @endif
             </tr>
         </thead>
         <tbody>
-            @forelse($attendances as $index => $data)
+            @forelse($studentRecaps ?? [] as $index => $item)
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
-                <td><strong>{{ $data->attendable->name ?? 'Data Terhapus' }}</strong></td>
-                @if($roleFilter == 'Siswa')
-                <td>{{ $data->attendable->class_name ?? '-' }}</td>
-                @else
-                <td>Staf Pengajar / Guru</td>
-                @endif
-                <td class="text-center">{{ $data->time_in ?? '-' }}</td>
-                <td class="text-center">{{ $data->time_out ?? '-' }}</td>
+                <td><strong>{{ $item['student']->name }}</strong></td>
+                <td>{{ $item['student']->class_name }}</td>
+                <td class="text-center">{{ $item['attendance']->time_in ?? '-' }}</td>
+                <td class="text-center">{{ $item['attendance']->time_out ?? '-' }}</td>
                 <td class="text-center">
-                    @if($data->status == 'hadir')
+                    @if($item['status'] == 'hadir')
                         <span class="badge badge-hadir">Tepat Waktu</span>
-                    @else
+                    @elseif($item['status'] == 'terlambat')
                         <span class="badge badge-terlambat">Terlambat</span>
+                    @else
+                        <span class="badge badge-alpha">Belum Absen</span>
                     @endif
                 </td>
-                @if($roleFilter == 'Guru')
-                @php
-                    $jp = 0;
-                    if ($data->attendable && method_exists($data->attendable, 'shifts')) {
-                        $dayName = \Carbon\Carbon::parse($data->date)->format('l');
-                        $sShift = $data->attendable->shifts->where('day', $dayName)->first();
-                        $jp = $sShift->total_hours ?? 0;
-                    }
-                @endphp
-                <td class="text-center"><strong>+{{ $jp }} JP</strong></td>
-                @endif
             </tr>
             @empty
             <tr>
-                <td colspan="{{ $roleFilter == 'Guru' ? 7 : 6 }}" class="text-center" style="padding: 15px; color: #64748b;">
-                    Tidak ada data rekapitulasi kehadiran yang tercatat pada kriteria ini.
+                <td colspan="6" class="text-center" style="padding: 15px; color: #64748b;">
+                    Tidak ada data siswa yang tercatat pada kriteria ini.
                 </td>
             </tr>
             @endforelse
         </tbody>
     </table>
+    @else
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th width="5%">No</th>
+                <th width="37%">Nama Lengkap & Gelar Guru</th>
+                <th width="20%">Kategori Pegawai</th>
+                <th width="13%" class="text-center">Jam Masuk</th>
+                <th width="13%" class="text-center">Jam Pulang</th>
+                <th width="12%" class="text-center">Status</th>
+                <th width="15%" class="text-center">Jam Mengajar</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($teacherRecaps ?? [] as $index => $item)
+            <tr>
+                <td class="text-center">{{ $index + 1 }}</td>
+                <td><strong>{{ $item['teacher']->name }}</strong></td>
+                <td>Staf Pengajar / Guru</td>
+                <td class="text-center">{{ $item['attendance']->time_in ?? '-' }}</td>
+                <td class="text-center">{{ $item['attendance']->time_out ?? '-' }}</td>
+                <td class="text-center">
+                    @if($item['status'] == 'hadir')
+                        <span class="badge badge-hadir">Tepat Waktu</span>
+                    @elseif($item['status'] == 'terlambat')
+                        <span class="badge badge-terlambat">Terlambat</span>
+                    @else
+                        <span class="badge badge-alpha">Belum Absen</span>
+                    @endif
+                </td>
+                <td class="text-center"><strong>+{{ $item['total_jp'] }} JP</strong></td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="7" class="text-center" style="padding: 15px; color: #64748b;">
+                    Tidak ada jadwal guru pada hari ini.
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+    </table>
+    @endif
 
     <!-- TANDA TANGAN KEPALA SEKOLAH DINAMIS DARI DB -->
     <div class="ttd-container">
@@ -144,7 +168,7 @@
             <tr>
                 <td class="ttd-box" style="text-align: left;">
                     <p>Mengetahui,</p>
-                    <p><strong>Kepala Sekolah</strong></p>
+                    <p><strong>Kepala {{ \App\Models\Setting::getVal('school_name', 'SMK Hijau Muda') }}</strong></p>
                     <div class="space-ttd"></div>
                     <p><strong><u>{{ \App\Models\Setting::getVal('headmaster_name', 'Kepala Sekolah') }}</u></strong></p>
                     <p>NIP. {{ \App\Models\Setting::getVal('headmaster_nip', '-') }}</p>

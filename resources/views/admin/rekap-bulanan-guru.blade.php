@@ -37,7 +37,7 @@
 </head>
 <body>
 
-    <!-- FORM FILTER RENTANG TANGGAL (Hanya tampil di Web, abaikan jika di PDF) -->
+    <!-- FORM FILTER RENTANG TANGGAL (Hanya tampil di Web, otomatis disembunyikan saat PDF) -->
     @if(!isset($isPdf))
     <div class="web-filter-box">
         <form method="GET" action="{{ route('admin.rekap.bulanan.guru') }}">

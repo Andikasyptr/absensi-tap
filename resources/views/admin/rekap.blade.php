@@ -10,7 +10,7 @@
                 <span class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 tracking-wider uppercase">SMK Hijau Muda</span>
             </div>
             <h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Rekap Absensi Harian & Jam Mengajar</h2>
-            <p class="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Laporan presensi lengkap dengan akumulasi jam mengajar guru otomatis.</p>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Pantau status kehadiran seluruh siswa & guru terjadwal hari ini secara real-time.</p>
         </div>
         <div class="flex flex-wrap gap-2">
             <!-- Tombol Menuju Rekap Periode / Bulanan Guru -->
@@ -19,7 +19,7 @@
                 <span>📊</span> Rekap Periode Guru (Bulanan)
             </a>
             <!-- Tombol Download Laporan PDF Harian -->
-            <a :href="'{{ route('admin.rekap.pdf') }}?role=' + (activeTab === 'siswa' ? 'Siswa' : 'Guru') + '&date={{ $date }}&status={{ request('status') }}'" 
+            <a :href="'{{ route('admin.rekap.pdf') }}?role=' + (activeTab === 'siswa' ? 'Siswa' : 'Guru') + '&date={{ $date }}&status={{ request('status') }}&class_name={{ request('class_name') }}'" 
                class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
                 <span>📥</span> Download PDF Harian
             </a>
@@ -41,12 +41,12 @@
             <h3 class="text-3xl font-extrabold mt-1">{{ $totalHadir }}</h3>
         </div>
         <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Siswa Hadir</p>
-            <h3 class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{{ $totalSiswa }}</h3>
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Siswa Hadir / Terdaftar</p>
+            <h3 class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{{ $totalSiswa }} <span class="text-xs font-normal text-slate-400">/ {{ $totalSiswaTerdaftar ?? 0 }}</span></h3>
         </div>
         <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Guru Hadir</p>
-            <h3 class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{{ $totalGuru }}</h3>
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Guru Hadir / Terjadwal</p>
+            <h3 class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{{ $totalGuruHadir }} <span class="text-xs font-normal text-slate-400">/ {{ $totalGuruJadwalHariIni ?? 0 }}</span></h3>
         </div>
         <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
             <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Akumulasi Jam Guru</p>
@@ -66,7 +66,7 @@
             <button @click="activeTab = 'guru'" 
                     :class="activeTab === 'guru' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'"
                     class="px-6 py-2.5 rounded-xl font-bold text-sm transition flex-1 lg:flex-none">
-                👨‍🏫 Rekap Guru & Jam Mengajar
+                👨‍🏫 Rekap Guru Terjadwal
             </button>
         </div>
 
@@ -74,11 +74,20 @@
         <form method="GET" action="{{ route('admin.rekap') }}" class="flex flex-wrap gap-2 w-full lg:w-auto items-center">
             <input type="hidden" name="role" x-model="activeTab">
             
+            <!-- Filter Kelas (Hanya tampil di tab siswa) -->
+            <select name="class_name" x-show="activeTab === 'siswa'" class="p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none text-slate-800 dark:text-slate-200">
+                <option value="">-- Semua Kelas --</option>
+                @foreach($classList as $cls)
+                    <option value="{{ $cls }}" {{ request('class_name') == $cls ? 'selected' : '' }}>{{ $cls }}</option>
+                @endforeach
+            </select>
+
             <!-- Filter Status Kehadiran -->
             <select name="status" class="p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold outline-none text-slate-800 dark:text-slate-200">
                 <option value="">-- Semua Status --</option>
-                <option value="hadir" {{ request('status') == 'hadir' ? 'selected' : '' }}>Tepat Waktu (Hadir)</option>
+                <option value="hadir" {{ request('status') == 'hadir' ? 'selected' : '' }}>Tepat Waktu</option>
                 <option value="terlambat" {{ request('status') == 'terlambat' ? 'selected' : '' }}>Terlambat</option>
+                <option value="belum_absen" {{ request('status') == 'belum_absen' ? 'selected' : '' }}>Belum Absen / Alpha</option>
             </select>
 
             <!-- Filter Tanggal -->
@@ -88,11 +97,11 @@
         </form>
     </div>
 
-    <!-- ================= TABEL SISWA ================= -->
+    <!-- ================= TABEL KESELURUHAN SISWA ================= -->
     <div x-show="activeTab === 'siswa'" class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
         <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-            <h3 class="font-bold text-lg text-slate-900 dark:text-white">Log Kehadiran Siswa</h3>
-            <span class="text-xs text-slate-400">Total: {{ $attendances->where('attendable_type', App\Models\Student::class)->count() }} Data</span>
+            <h3 class="font-bold text-lg text-slate-900 dark:text-white">Status Kehadiran Seluruh Siswa Terdaftar</h3>
+            <span class="text-xs text-slate-400">Total Ditampilkan: {{ count($studentRecaps ?? []) }} Siswa</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -102,43 +111,47 @@
                         <th class="p-4 font-semibold">Kelas</th>
                         <th class="p-4 font-semibold text-center">Waktu Masuk</th>
                         <th class="p-4 font-semibold text-center">Waktu Pulang</th>
-                        <th class="p-4 font-semibold text-center">Status</th>
-                        <th class="p-4 font-semibold text-center">Aksi</th>
+                        <th class="p-4 font-semibold text-center">Status Kehadiran</th>
+                        <th class="p-4 font-semibold text-center">Aksi Record</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                    @forelse($attendances->where('attendable_type', App\Models\Student::class) as $data)
+                    @forelse($studentRecaps ?? [] as $item)
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                        <td class="p-4 font-bold text-slate-900 dark:text-white">{{ $data->attendable->name ?? '-' }}</td>
+                        <td class="p-4 font-bold text-slate-900 dark:text-white">{{ $item['student']->name }}</td>
                         <td class="p-4 text-slate-600 dark:text-slate-300 text-sm font-medium">
                             <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                                {{ $data->attendable->class_name ?? '-' }}
+                                {{ $item['student']->class_name }}
                             </span>
                         </td>
-                        <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $data->time_in ?? '-' }}</td>
-                        <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $data->time_out ?? '-' }}</td>
+                        <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $item['attendance']->time_in ?? '-' }}</td>
+                        <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $item['attendance']->time_out ?? '-' }}</td>
                         <td class="p-4 text-center">
-                            @if($data->status == 'hadir')
+                            @if($item['status'] == 'hadir')
                                 <span class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded-full uppercase">Tepat Waktu</span>
-                            @elseif($data->status == 'terlambat')
+                            @elseif($item['status'] == 'terlambat')
                                 <span class="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full uppercase">Terlambat</span>
                             @else
-                                <span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold rounded-full uppercase">{{ $data->status }}</span>
+                                <span class="px-3 py-1 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 text-[10px] font-bold rounded-full uppercase">Belum Absen</span>
                             @endif
                         </td>
                         <td class="p-4 text-center">
-                            <form action="{{ route('admin.rekap.destroy', $data->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data absensi ini?');">
+                            @if($item['attendance'])
+                            <form action="{{ route('admin.rekap.destroy', $item['attendance']->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data absensi ini?');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold transition">
-                                    🗑️ Hapus
+                                    🗑️ Hapus Record
                                 </button>
                             </form>
+                            @else
+                            <span class="text-xs text-slate-400 italic">Tanpa Record</span>
+                            @endif
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="p-8 text-center text-slate-400">Belum ada data absensi siswa sesuai filter pada tanggal ini.</td>
+                        <td colspan="6" class="p-8 text-center text-slate-400">Tidak ada data siswa yang ditemukan sesuai filter ini.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -146,11 +159,11 @@
         </div>
     </div>
 
-    <!-- ================= TABEL GURU & AKUMULASI JAM MENGAJAR ================= -->
+    <!-- ================= TABEL GURU TERJADWAL ================= -->
     <div x-show="activeTab === 'guru'" class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors" style="display: none;">
         <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-            <h3 class="font-bold text-lg text-slate-900 dark:text-white">Log Kehadiran Guru & Akumulasi Jam Mengajar</h3>
-            <span class="text-xs text-slate-400">Total: {{ $attendances->where('attendable_type', App\Models\Teacher::class)->count() }} Guru Hadir</span>
+            <h3 class="font-bold text-lg text-slate-900 dark:text-white">Status Kehadiran Guru Terjadwal Hari Ini</h3>
+            <span class="text-xs text-slate-400">Total Terjadwal: {{ count($teacherRecaps ?? []) }} Guru</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -160,51 +173,47 @@
                         <th class="p-4 font-semibold text-center">Waktu Masuk</th>
                         <th class="p-4 font-semibold text-center">Waktu Pulang</th>
                         <th class="p-4 font-semibold text-center">Status Kehadiran</th>
-                        <th class="p-4 font-semibold text-center">Jumlah Jam Mengajar (JP)</th>
+                        <th class="p-4 font-semibold text-center">Beban Mengajar (JP)</th>
                         <th class="p-4 font-semibold text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                    @forelse($attendances->where('attendable_type', App\Models\Teacher::class) as $data)
-                    @php
-                        $jamMengajarHariIni = 0;
-                        if ($data->attendable && method_exists($data->attendable, 'shifts')) {
-                            $dayEnglish = \Carbon\Carbon::parse($data->date)->format('l');
-                            $teacherShift = $data->attendable->shifts->where('day', $dayEnglish)->first();
-                            $jamMengajarHariIni = $teacherShift->total_hours ?? 0;
-                        }
-                    @endphp
+                    @forelse($teacherRecaps ?? [] as $item)
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                        <td class="p-4 font-bold text-slate-900 dark:text-white">{{ $data->attendable->name ?? 'Data Guru Terhapus' }}</td>
-                        <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $data->time_in ?? '-' }}</td>
-                        <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $data->time_out ?? '-' }}</td>
+                        <td class="p-4 font-bold text-slate-900 dark:text-white">{{ $item['teacher']->name }}</td>
+                        <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $item['attendance']->time_in ?? '-' }}</td>
+                        <td class="p-4 text-center font-mono text-slate-600 dark:text-slate-300 text-sm">{{ $item['attendance']->time_out ?? '-' }}</td>
                         <td class="p-4 text-center">
-                            @if($data->status == 'hadir')
+                            @if($item['status'] == 'hadir')
                                 <span class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded-full uppercase">Tepat Waktu</span>
-                            @elseif($data->status == 'terlambat')
+                            @elseif($item['status'] == 'terlambat')
                                 <span class="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full uppercase">Terlambat</span>
                             @else
-                                <span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold rounded-full uppercase">{{ $data->status }}</span>
+                                <span class="px-3 py-1 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 text-[10px] font-bold rounded-full uppercase">Belum Absen</span>
                             @endif
                         </td>
                         <td class="p-4 text-center">
                             <span class="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 rounded-xl font-mono font-bold text-xs">
-                                +{{ $jamMengajarHariIni }} Jam (JP)
+                                +{{ $item['total_jp'] }} JP
                             </span>
                         </td>
                         <td class="p-4 text-center">
-                            <form action="{{ route('admin.rekap.destroy', $data->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data absensi ini?');">
+                            @if($item['attendance'])
+                            <form action="{{ route('admin.rekap.destroy', $item['attendance']->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data absensi ini?');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold transition">
-                                    🗑️ Hapus
+                                    🗑️ Hapus Record
                                 </button>
                             </form>
+                            @else
+                            <span class="text-xs text-slate-400 italic">Tanpa Record</span>
+                            @endif
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="p-8 text-center text-slate-400">Belum ada data absensi guru sesuai filter pada tanggal ini.</td>
+                        <td colspan="6" class="p-8 text-center text-slate-400">Tidak ada jadwal guru pada hari ini.</td>
                     </tr>
                     @endforelse
                 </tbody>

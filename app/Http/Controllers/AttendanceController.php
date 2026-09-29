@@ -106,56 +106,115 @@ class AttendanceController extends Controller
         }
     }
 
-    // --- REKAP ABSENSI HARIAN ---
+    // --- REKAP ABSENSI HARIAN (SISWA & GURU TERJADWAL) ---
     public function rekapIndex(Request $request)
     {
         $date = $request->input('date', Carbon::today()->toDateString());
-        $roleFilter = $request->input('role');
+        $roleFilter = $request->input('role', 'siswa');
         $statusFilter = $request->input('status');
+        $kelasFilter = $request->input('class_name');
 
-        $query = Attendance::with('attendable')->where('date', $date);
+        $dayEnglish = Carbon::parse($date)->format('l');
 
-        if ($roleFilter == 'Siswa') {
-            $query->where('attendable_type', Student::class);
-        } elseif ($roleFilter == 'Guru') {
-            $query->with('attendable.shifts');
-            $query->where('attendable_type', Teacher::class);
+        // 1. Ambil daftar kelas untuk dropdown filter siswa
+        $classList = Student::select('class_name')->distinct()->orderBy('class_name')->pluck('class_name');
+
+        // 2. Logika Rekap Siswa (Semua Siswa Terdaftar)
+        $studentRecaps = [];
+        $studentQuery = Student::query();
+        if ($kelasFilter) {
+            $studentQuery->where('class_name', $kelasFilter);
+        }
+        $allStudents = $studentQuery->orderBy('class_name')->orderBy('name')->get();
+
+        $attendancesToday = Attendance::where('attendable_type', Student::class)
+            ->where('date', $date)
+            ->get()
+            ->keyBy('attendable_id');
+
+        foreach ($allStudents as $student) {
+            $att = $attendancesToday->get($student->id);
+            $status = 'Belum Absen';
+
+            if ($att) {
+                $status = $att->status; 
+            }
+
+            if ($statusFilter) {
+                if ($statusFilter == 'belum_absen' && $status != 'Belum Absen') continue;
+                if ($statusFilter != 'belum_absen' && $status != $statusFilter) continue;
+            }
+
+            $studentRecaps[] = [
+                'student' => $student,
+                'attendance' => $att,
+                'status' => $status
+            ];
         }
 
-        if ($statusFilter) {
-            $query->where('status', $statusFilter);
+        // 3. Logika Rekap Guru (Hanya Guru yang memiliki Shift di hari tersebut)
+        $teachersWithShift = Teacher::whereHas('shifts', function($q) use ($dayEnglish) {
+            $q->where('day', $dayEnglish);
+        })->with(['shifts' => function($q) use ($dayEnglish) {
+            $q->where('day', $dayEnglish);
+        }])->orderBy('name')->get();
+
+        $teacherAttendancesToday = Attendance::where('attendable_type', Teacher::class)
+            ->where('date', $date)
+            ->get()
+            ->keyBy('attendable_id');
+
+        $teacherRecaps = [];
+        $totalJamGuruAll = 0;
+
+        foreach ($teachersWithShift as $teacher) {
+            $att = $teacherAttendancesToday->get($teacher->id);
+            $status = 'Belum Absen';
+
+            if ($att) {
+                $status = $att->status; 
+            }
+
+            if ($statusFilter) {
+                if ($statusFilter == 'belum_absen' && $status != 'Belum Absen') continue;
+                if ($statusFilter != 'belum_absen' && $status != $statusFilter) continue;
+            }
+
+            $shiftHariIni = $teacher->shifts->first();
+            $jpHariIni = $shiftHariIni ? (int) $shiftHariIni->total_hours : 0;
+
+            if ($att) {
+                $totalJamGuruAll += $jpHariIni;
+            }
+
+            $teacherRecaps[] = [
+                'teacher' => $teacher,
+                'attendance' => $att,
+                'status' => $status,
+                'total_jp' => $jpHariIni
+            ];
         }
 
-        $attendances = $query->latest()->get();
-
+        // Statistik
         $totalHadir = Attendance::where('date', $date)->count();
         $totalSiswa = Attendance::where('date', $date)->where('attendable_type', Student::class)->count();
-        $totalGuru = Attendance::where('date', $date)->where('attendable_type', Teacher::class)->count();
-
-        $totalJamGuruAll = 0;
-        $guruAttendances = Attendance::with('attendable.shifts')
-            ->where('attendable_type', Teacher::class)
-            ->where('date', $date)
-            ->get();
-
-        foreach($guruAttendances as $gat) {
-            if ($gat->attendable && method_exists($gat->attendable, 'shifts')) {
-                $dayName = Carbon::parse($gat->date)->format('l');
-                $shiftHariIni = $gat->attendable->shifts->where('day', $dayName)->first();
-                if ($shiftHariIni && isset($shiftHariIni->total_hours)) {
-                    $totalJamGuruAll += (int) $shiftHariIni->total_hours;
-                }
-            }
-        }
+        $totalSiswaTerdaftar = Student::count();
+        $totalGuruHadir = Attendance::where('date', $date)->where('attendable_type', Teacher::class)->count();
+        $totalGuruJadwalHariIni = count($teachersWithShift);
 
         return view('admin.rekap', compact(
-            'attendances', 
+            'studentRecaps',
+            'teacherRecaps',
+            'classList',
             'totalHadir', 
             'totalSiswa', 
-            'totalGuru', 
+            'totalSiswaTerdaftar',
+            'totalGuruHadir',
+            'totalGuruJadwalHariIni',
             'date', 
             'roleFilter', 
             'statusFilter',
+            'kelasFilter',
             'totalJamGuruAll'
         ));
     }
@@ -209,46 +268,98 @@ class AttendanceController extends Controller
         ));
     }
 
-    // --- EXPORT LAPORAN HARIAN KE PDF ---
+    // --- EXPORT LAPORAN HARIAN KE PDF (MENDUKUNG SEMUA SISWA & GURU TERJADWAL) ---
     public function exportPdf(Request $request)
     {
         $date = $request->input('date', Carbon::today()->toDateString());
         $roleFilter = $request->input('role', 'Siswa');
         $statusFilter = $request->input('status');
+        $kelasFilter = $request->input('class_name');
 
-        $query = Attendance::with('attendable')->where('date', $date);
+        $dayEnglish = Carbon::parse($date)->format('l');
+        $studentRecaps = [];
+        $teacherRecaps = [];
+        $totalJamGuruAll = 0;
 
         if ($roleFilter == 'Siswa') {
-            $query->where('attendable_type', Student::class);
-        } elseif ($roleFilter == 'Guru') {
-            $query->with('attendable.shifts');
-            $query->where('attendable_type', Teacher::class);
-        }
+            $studentQuery = Student::query();
+            if ($kelasFilter) {
+                $studentQuery->where('class_name', $kelasFilter);
+            }
+            $allStudents = $studentQuery->orderBy('class_name')->orderBy('name')->get();
 
-        if ($statusFilter) {
-            $query->where('status', $statusFilter);
-        }
+            $attendancesToday = Attendance::where('attendable_type', Student::class)
+                ->where('date', $date)
+                ->get()
+                ->keyBy('attendable_id');
 
-        $attendances = $query->latest()->get();
+            foreach ($allStudents as $student) {
+                $att = $attendancesToday->get($student->id);
+                $status = 'Belum Absen';
 
-        $totalJamGuruAll = 0;
-        if ($roleFilter == 'Guru') {
-            foreach($attendances as $gat) {
-                if ($gat->attendable && method_exists($gat->attendable, 'shifts')) {
-                    $dayName = Carbon::parse($gat->date)->format('l');
-                    $shiftHariIni = $gat->attendable->shifts->where('day', $dayName)->first();
-                    if ($shiftHariIni && isset($shiftHariIni->total_hours)) {
-                        $totalJamGuruAll += (int) $shiftHariIni->total_hours;
-                    }
+                if ($att) {
+                    $status = $att->status; 
                 }
+
+                if ($statusFilter) {
+                    if ($statusFilter == 'belum_absen' && $status != 'Belum Absen') continue;
+                    if ($statusFilter != 'belum_absen' && $status != $statusFilter) continue;
+                }
+
+                $studentRecaps[] = [
+                    'student' => $student,
+                    'attendance' => $att,
+                    'status' => $status
+                ];
+            }
+        } elseif ($roleFilter == 'Guru') {
+            $teachersWithShift = Teacher::whereHas('shifts', function($q) use ($dayEnglish) {
+                $q->where('day', $dayEnglish);
+            })->with(['shifts' => function($q) use ($dayEnglish) {
+                $q->where('day', $dayEnglish);
+            }])->orderBy('name')->get();
+
+            $teacherAttendancesToday = Attendance::where('attendable_type', Teacher::class)
+                ->where('date', $date)
+                ->get()
+                ->keyBy('attendable_id');
+
+            foreach ($teachersWithShift as $teacher) {
+                $att = $teacherAttendancesToday->get($teacher->id);
+                $status = 'Belum Absen';
+
+                if ($att) {
+                    $status = $att->status; 
+                }
+
+                if ($statusFilter) {
+                    if ($statusFilter == 'belum_absen' && $status != 'Belum Absen') continue;
+                    if ($statusFilter != 'belum_absen' && $status != $statusFilter) continue;
+                }
+
+                $shiftHariIni = $teacher->shifts->first();
+                $jpHariIni = $shiftHariIni ? (int) $shiftHariIni->total_hours : 0;
+
+                if ($att) {
+                    $totalJamGuruAll += $jpHariIni;
+                }
+
+                $teacherRecaps[] = [
+                    'teacher' => $teacher,
+                    'attendance' => $att,
+                    'status' => $status,
+                    'total_jp' => $jpHariIni
+                ];
             }
         }
 
         $pdf = Pdf::loadView('admin.rekap-pdf', compact(
-            'attendances', 
+            'studentRecaps',
+            'teacherRecaps',
             'date', 
             'roleFilter', 
             'statusFilter',
+            'kelasFilter',
             'totalJamGuruAll'
         ));
 
@@ -298,10 +409,13 @@ class AttendanceController extends Controller
             ];
         }
 
-        $pdf = Pdf::loadView('admin.rekap-bulanan-guru-pdf', compact(
+        $isPdf = true;
+
+        $pdf = Pdf::loadView('admin.rekap-bulanan-guru', compact(
             'rekapPerGuru', 
             'startDate', 
-            'endDate'
+            'endDate',
+            'isPdf'
         ));
 
         $pdf->setPaper('a4', 'portrait');
