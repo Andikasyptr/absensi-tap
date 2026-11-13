@@ -12,33 +12,29 @@ use App\Models\SchoolClass;
 
 class DataController extends Controller
 {
-    // Tampilkan daftar siswa, guru, staf TU, serta daftar kelas untuk dropdown
+    // Tampilkan daftar siswa, guru, staf TU, security, serta daftar kelas untuk dropdown
     public function index()
     {
         $students = Student::all();
         $teachers = Teacher::with('shifts')->get(); 
-        $staffList = Staff::orderBy('name')->get(); // Mengambil data Staf TU
+        
+        // Mengambil data Staf TU (selain Security/Satpam)
+        $staffList = Staff::where(function ($query) {
+            $query->where('position', 'not like', '%Security%')
+                  ->where('position', 'not like', '%Satpam%')
+                  ->orWhereNull('position');
+        })->orderBy('name')->get();
+
+        // Mengambil data Security / Satpam
+        $securityList = Staff::where('position', 'like', '%Security%')
+            ->orWhere('position', 'like', '%Satpam%')
+            ->orderBy('name')->get();
+
         $schoolClasses = SchoolClass::orderBy('name')->get(); 
         
-        return view('admin.data-index', compact('students', 'teachers', 'staffList', 'schoolClasses'));
+        return view('admin.data-index', compact('students', 'teachers', 'staffList', 'securityList', 'schoolClasses'));
     }
-
-    // Simpan data siswa baru
-    public function storeStudent(Request $request)
-    {
-        $request->validate([
-            'nis' => 'required|unique:students,nis',
-            'name' => 'required|string',
-            'rfid_uid' => 'required|unique:students,rfid_uid', 
-            'class_name' => 'required|string',
-        ]);
-
-        Student::create($request->all());
-
-        return redirect()->route('admin.data.index')->with('success', 'Siswa berhasil ditambahkan!');
-    }
-
-    // Perbarui data siswa (EDIT)
+        // Perbarui data siswa (EDIT)
     public function updateStudent(Request $request, $id)
     {
         $student = Student::findOrFail($id);
@@ -156,7 +152,65 @@ class DataController extends Controller
 
         return redirect()->route('admin.data.index')->with('success', 'Data Staf TU berhasil dihapus.');
     }
+    // ================= MANAJEMEN SECURITY / SATPAM =================
 
+    public function storeSecurity(Request $request)
+    {
+        $request->validate([
+            'name'     => 'required|string',
+            'rfid_uid' => 'required|unique:staff,rfid_uid',
+            'position' => 'nullable|string',
+        ]);
+
+        // Pastikan posisi memiliki label 'Security' agar terfilter otomatis di tab Security
+        $position = $request->position;
+        if (empty($position)) {
+            $position = 'Security / Satpam';
+        } elseif (!str_contains(strtolower($position), 'security') && !str_contains(strtolower($position), 'satpam')) {
+            $position = 'Security - ' . $position;
+        }
+
+        Staff::create([
+            'name'     => $request->name,
+            'position' => $position,
+            'rfid_uid' => $request->rfid_uid,
+        ]);
+
+        return redirect()->route('admin.data.index')->with('success', 'Petugas Security berhasil ditambahkan!');
+    }
+
+    public function updateSecurity(Request $request, $id)
+    {
+        $security = Staff::findOrFail($id);
+
+        $request->validate([
+            'name'     => 'required|string',
+            'rfid_uid' => 'required|unique:staff,rfid_uid,' . $id,
+            'position' => 'nullable|string',
+        ]);
+
+        $position = $request->position;
+        if (empty($position)) {
+            $position = 'Security / Satpam';
+        } elseif (!str_contains(strtolower($position), 'security') && !str_contains(strtolower($position), 'satpam')) {
+            $position = 'Security - ' . $position;
+        }
+
+        $security->update([
+            'name'     => $request->name,
+            'position' => $position,
+            'rfid_uid' => $request->rfid_uid,
+        ]);
+
+        return redirect()->route('admin.data.index')->with('success', 'Data petugas security berhasil diperbarui!');
+    }
+
+    public function destroySecurity($id)
+    {
+        Staff::findOrFail($id)->delete();
+
+        return redirect()->route('admin.data.index')->with('success', 'Data petugas security berhasil dihapus!');
+    }
     // --- MANAJEMEN SHIFT GURU ---
 
     // Simpan shift jam masuk harian & jumlah jam mengajar untuk guru

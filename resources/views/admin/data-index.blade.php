@@ -53,6 +53,11 @@
                     class="px-6 py-2.5 rounded-xl font-bold text-sm transition">
                 💼 Staf TU & Tenaga Kependidikan
             </button>
+            <button @click="activeTab = 'security'" 
+                    :class="activeTab === 'security' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'"
+                    class="px-6 py-2.5 rounded-xl font-bold text-sm transition">
+                🛡️ Security / Satpam
+            </button>
         </div>
 
         <!-- ================= SECTION SISWA ================= -->
@@ -253,6 +258,117 @@
                 </div>
                 @endisset
             </div>
+        
+            <!-- ================= SECTION SECURITY ================= -->
+        <div x-show="activeTab === 'security'" class="grid grid-cols-1 lg:grid-cols-3 gap-8" style="display: none;">
+            <!-- Form Tambah Security -->
+            <div class="lg:col-span-1">
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
+                    <h3 class="font-bold text-lg text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span>➕</span> Tambah Petugas Security
+                    </h3>
+                    <form action="{{ route('admin.security.store') }}" method="POST" class="space-y-4">
+                        @csrf
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nama Petugas</label>
+                            <input type="text" name="name" x-model="securityName" required placeholder="Contoh: Hendra Wijaya" class="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Shift Jaga / Pos</label>
+                            <select name="shift_type" required class="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white outline-none transition text-sm">
+                                <option value="Shift Pagi (06:00 - 14:00)">Shift Pagi (06:00 - 14:00)</option>
+                                <option value="Shift Siang (14:00 - 22:00)">Shift Siang (14:00 - 22:00)</option>
+                                <option value="Shift Malam (22:00 - 06:00)">Shift Malam (22:00 - 06:00)</option>
+                                <option value="Non-Shift / Harian">Non-Shift / Harian</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">UID Chip RFID / QR Code</label>
+                                <button type="button" @click="generateRandomSecurity" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium">✨ Generate QR Manual</button>
+                            </div>
+                            <input type="text" name="rfid_uid" x-model="securityCode" required placeholder="Klik & Tap kartu ke USB Reader..." class="w-full p-3 bg-emerald-50/50 dark:bg-slate-800/60 border border-emerald-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition text-sm font-mono">
+                            <p class="text-[10px] text-slate-400 mt-1">*Tempelkan kartu ke USB RFID Reader untuk mengisi otomatis.</p>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 transition text-sm">
+                            Simpan Data Security
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tabel Daftar Security -->
+            <div class="lg:col-span-2">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+                    <div class="p-6 border-b border-slate-100 dark:border-slate-800">
+                        <h3 class="font-bold text-lg text-slate-900 dark:text-white">Daftar Kartu Security Terdaftar (Hybrid)</h3>
+                    </div>
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-400 uppercase text-xs tracking-wider">
+                                <tr>
+                                    <th class="p-4 font-semibold">Pratinjau Kartu Hybrid (Chip + QR)</th>
+                                    <th class="p-4 font-semibold text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                @isset($securities)
+                                    @forelse($securities as $sec)
+                                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition">
+                                        <td class="p-4">
+                                            <div class="w-80 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 text-white rounded-2xl p-4 shadow-md border border-slate-700/80 flex flex-col justify-between">
+                                                <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
+                                                    <span class="text-[9px] font-bold uppercase text-emerald-400">SMK HIJAU MUDA • HYBRID ID</span>
+                                                    <span class="text-[9px] bg-amber-600 px-2 py-0.5 rounded text-white font-semibold">SECURITY</span>
+                                                </div>
+                                                <div class="flex items-center gap-3 my-3">
+                                                    <div class="w-10 h-8 bg-gradient-to-tr from-amber-400 to-yellow-200 rounded border border-amber-500 flex items-center justify-center text-[8px] font-bold text-amber-900 shadow-inner shrink-0">CHIP</div>
+                                                    <div class="bg-white p-1 rounded shrink-0">
+                                                        <div class="qrcode" data-value="{{ $sec->rfid_uid }}" data-size="52"></div>
+                                                    </div>
+                                                    <div class="overflow-hidden">
+                                                        <h4 class="font-bold text-xs text-white truncate">{{ $sec->name }}</h4>
+                                                        <p class="text-[10px] text-slate-300">{{ $sec->shift_type ?? 'Petugas Keamanan' }}</p>
+                                                    </div>
+                                                </div>
+                                                <div class="border-t border-slate-700/60 pt-2 flex justify-between text-[9px] text-slate-400 font-mono">
+                                                    <span>ID: {{ $sec->rfid_uid }}</span>
+                                                    <span class="text-emerald-400 font-sans">● AKTIF</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="p-4 text-center align-middle">
+                                            <div class="flex items-center justify-center gap-2">
+                                                <button type="button" @click="openEditSecurity({{ $sec->id }}, '{{ addslashes($sec->name) }}', '{{ addslashes($sec->shift_type ?? '') }}', '{{ $sec->rfid_uid }}')" 
+                                                        class="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-sky-600/20 flex items-center gap-1">
+                                                    ✏️ Edit
+                                                </button>
+                                                <button type="button" onclick="printHybridCard('{{ addslashes($sec->name) }}', '{{ addslashes($sec->shift_type ?? 'Petugas Keamanan') }}', '{{ $sec->rfid_uid }}', 'SECURITY')" 
+                                                        class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-md shadow-emerald-600/20 flex items-center gap-1">
+                                                    🖨️ Cetak
+                                                </button>
+                                                <form action="{{ route('admin.security.destroy', $sec->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data security {{ addslashes($sec->name) }}?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-rose-600/20 flex items-center gap-1">
+                                                        🗑️ Hapus
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="2" class="p-8 text-center text-slate-400 dark:text-slate-500">Belum ada data security yang terdaftar.</td>
+                                    </tr>
+                                    @endforelse
+                                @endisset
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
             <!-- Tabel Daftar Guru -->
             <div class="lg:col-span-2">
@@ -359,7 +475,7 @@
 
         </div>
 
-        <!-- ================= SECTION TATA USAHA (STAFF TU) ================= -->
+       <!-- ================= SECTION TATA USAHA (STAFF TU) ================= -->
         <div x-show="activeTab === 'tata_usaha'" class="grid grid-cols-1 lg:grid-cols-3 gap-8" style="display: none;">
             
             <div class="lg:col-span-1">
@@ -462,137 +578,112 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </div> <!-- PENUTUP SECTION TATA USAHA (WAJIB ADA DI SINI) -->
 
-        <!-- ================= MODAL EDIT SISWA ================= -->
-        <div x-show="showEditStudentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4" style="display: none;">
-            <div @click.away="showEditStudentModal = false" class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl w-full max-w-md space-y-4">
-                <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <h3 class="font-bold text-lg text-slate-900 dark:text-white">Edit Data Siswa</h3>
-                    <button @click="showEditStudentModal = false" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-                </div>
-                <form :action="'{{ url('admin/student') }}/' + editStudentId" method="POST" class="space-y-4">
-                    @csrf
-                    @method('PUT')
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">NIS</label>
-                        <input type="text" name="nis" x-model="editStudentNis" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nama Lengkap</label>
-                        <input type="text" name="name" x-model="editStudentName" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Kelas</label>
-                        <select name="class_name" x-model="editStudentClass" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none">
-                            <option value="">-- Pilih Kelas --</option>
-                            @foreach($schoolClasses as $cls)
-                                <option value="{{ $cls->name }}">{{ $cls->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">UID Chip RFID / QR Code</label>
-                        <input type="text" name="rfid_uid" x-model="editStudentUid" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono text-slate-900 dark:text-white outline-none">
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" @click="showEditStudentModal = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition">Batal</button>
-                        <button type="submit" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-600/20">Simpan Perubahan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- ================= MODAL EDIT GURU ================= -->
-        <div x-show="showEditTeacherModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4" style="display: none;">
-            <div @click.away="showEditTeacherModal = false" class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl w-full max-w-md space-y-4">
-                <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <h3 class="font-bold text-lg text-slate-900 dark:text-white">Edit Data Guru</h3>
-                    <button @click="showEditTeacherModal = false" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-                </div>
-                <form :action="'{{ url('admin/teacher') }}/' + editTeacherId" method="POST" class="space-y-4">
-                    @csrf
-                    @method('PUT')
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nama Lengkap & Gelar</label>
-                        <input type="text" name="name" x-model="editTeacherName" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">UID Chip RFID / QR Code</label>
-                        <input type="text" name="rfid_uid" x-model="editTeacherUid" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono text-slate-900 dark:text-white outline-none">
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" @click="showEditTeacherModal = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition">Batal</button>
-                        <button type="submit" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-600/20">Simpan Perubahan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- ================= MODAL EDIT STAFF TU ================= -->
-        <div x-show="showEditStaffModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4" style="display: none;">
-            <div @click.away="showEditStaffModal = false" class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl w-full max-w-md space-y-4">
-                <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <h3 class="font-bold text-lg text-slate-900 dark:text-white">Edit Data Staf TU</h3>
-                    <button @click="showEditStaffModal = false" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-                </div>
-                <form :action="'{{ url('admin/staff') }}/' + editStaffId" method="POST" class="space-y-4">
-                    @csrf
-                    @method('PUT')
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nama Lengkap & Gelar</label>
-                        <input type="text" name="name" x-model="editStaffName" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Jabatan / Posisi</label>
-                        <input type="text" name="position" x-model="editStaffPosition" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">UID Chip RFID / QR Code</label>
-                        <input type="text" name="rfid_uid" x-model="editStaffUid" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono text-slate-900 dark:text-white outline-none">
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" @click="showEditStaffModal = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition">Batal</button>
-                        <button type="submit" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-lg">Simpan Perubahan</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- ================= MODAL EDIT SHIFT GURU ================= -->
-        <div x-show="showEditShiftModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4" style="display: none;">
-            <div @click.away="showEditShiftModal = false" class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-2xl w-full max-w-md space-y-4">
-                <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <h3 class="font-bold text-lg text-slate-900 dark:text-white">Edit Shift (<span x-text="editShiftDay"></span>)</h3>
-                    <button @click="showEditShiftModal = false" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-                </div>
-                <form :action="'{{ url('admin/shifts') }}/' + editShiftId" method="POST" class="space-y-4">
-                    @csrf
-                    @method('PUT')
-                    <div class="grid grid-cols-2 gap-2">
+        <!-- ================= SECTION SECURITY ================= -->
+        <div x-show="activeTab === 'security'" class="grid grid-cols-1 lg:grid-cols-3 gap-8" style="display: none;">
+            
+            <div class="lg:col-span-1">
+                <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
+                    <h3 class="font-bold text-lg text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                        <span>➕</span> Tambah Petugas Security
+                    </h3>
+                    <form action="{{ route('admin.security.store') }}" method="POST" class="space-y-4">
+                        @csrf
                         <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Jam Masuk</label>
-                            <input type="time" name="shift_start" x-model="editShiftStart" required class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono text-slate-900 dark:text-white outline-none">
+                            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nama Lengkap</label>
+                            <input type="text" name="name" x-model="securityName" required placeholder="Contoh: Hendra Wijaya" class="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white outline-none">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Jam Pulang</label>
-                            <input type="time" name="shift_end" x-model="editShiftEnd" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono text-slate-900 dark:text-white outline-none">
+                            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pos / Shift Jaga</label>
+                            <input type="text" name="position" placeholder="Contoh: Pos Gerbang Utama / Shift Pagi" class="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white outline-none">
                         </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">UID Chip RFID / QR Code</label>
+                                <button type="button" @click="generateRandomSecurity" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium">✨ Generate QR Manual</button>
+                            </div>
+                            <input type="text" name="rfid_uid" x-model="securityCode" required placeholder="Klik & Tap kartu ke USB Reader..." class="w-full p-3 bg-emerald-50/50 dark:bg-slate-800/60 border border-emerald-200 dark:border-slate-700 rounded-xl text-sm font-mono text-slate-900 dark:text-white outline-none">
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg transition text-sm">
+                            Simpan Petugas Security
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tabel Daftar Security -->
+            <div class="lg:col-span-2">
+                <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+                    <div class="p-6 border-b border-slate-100 dark:border-slate-800">
+                        <h3 class="font-bold text-lg text-slate-900 dark:text-white">Daftar Petugas Security Terdaftar</h3>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Jumlah Jam Mengajar (JP)</label>
-                        <input type="number" name="total_hours" x-model="editShiftHours" min="1" max="12" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white outline-none">
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-400 uppercase text-xs tracking-wider">
+                                <tr>
+                                    <th class="p-4 font-semibold">Pratinjau Kartu Hybrid (Chip + QR)</th>
+                                    <th class="p-4 font-semibold text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                @isset($securityList)
+                                    @forelse($securityList as $security)
+                                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition">
+                                        <td class="p-4">
+                                            <div class="w-80 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 text-white rounded-2xl p-4 shadow-md border border-slate-700/80 flex flex-col justify-between">
+                                                <div class="flex justify-between items-center border-b border-slate-700/60 pb-2">
+                                                    <span class="text-[9px] font-bold uppercase text-emerald-400">SMK HIJAU MUDA • HYBRID ID</span>
+                                                    <span class="text-[9px] bg-amber-600 px-2 py-0.5 rounded text-white font-semibold">SECURITY</span>
+                                                </div>
+                                                <div class="flex items-center gap-3 my-3">
+                                                    <div class="w-10 h-8 bg-gradient-to-tr from-amber-400 to-yellow-200 rounded border border-amber-500 flex items-center justify-center text-[8px] font-bold text-amber-900 shadow-inner shrink-0">CHIP</div>
+                                                    <div class="bg-white p-1 rounded shrink-0">
+                                                        <div class="qrcode" data-value="{{ $security->rfid_uid }}" data-size="52"></div>
+                                                    </div>
+                                                    <div class="overflow-hidden">
+                                                        <h4 class="font-bold text-xs text-white truncate">{{ $security->name }}</h4>
+                                                        <p class="text-[10px] text-slate-300">{{ $security->position ?? 'Petugas Security' }}</p>
+                                                    </div>
+                                                </div>
+                                                <div class="border-t border-slate-700/60 pt-2 flex justify-between text-[9px] text-slate-400 font-mono">
+                                                    <span>ID: {{ $security->rfid_uid }}</span>
+                                                    <span class="text-emerald-400 font-sans">● AKTIF</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="p-4 text-center align-middle">
+                                            <div class="flex items-center justify-center gap-2">
+                                                <button type="button" @click="openEditSecurity({{ $security->id }}, '{{ addslashes($security->name) }}', '{{ addslashes($security->position ?? '') }}', '{{ $security->rfid_uid }}')" 
+                                                        class="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1">
+                                                    ✏️ Edit
+                                                </button>
+                                                <button type="button" onclick="printHybridCard('{{ addslashes($security->name) }}', '{{ addslashes($security->position ?? 'Petugas Security') }}', '{{ $security->rfid_uid }}', 'SECURITY')" 
+                                                        class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1">
+                                                    🖨️ Cetak
+                                                </button>
+                                                <form action="{{ route('admin.security.destroy', $security->id) }}" method="POST" onsubmit="return confirm('Hapus petugas security {{ addslashes($security->name) }}?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1">
+                                                        🗑️ Hapus
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="2" class="p-8 text-center text-slate-400">Belum ada data petugas security.</td>
+                                    </tr>
+                                    @endforelse
+                                @endisset
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" @click="showEditShiftModal = false" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition">Batal</button>
-                        <button type="submit" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-emerald-600/20">Simpan Perubahan</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
-
-    </div>
-
     <!-- Script Render QR Code & Tombol Cetak Kartu Hybrid -->
     <script>
         document.addEventListener("DOMContentLoaded", () => {

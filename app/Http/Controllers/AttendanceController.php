@@ -13,6 +13,40 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class AttendanceController extends Controller
 {
+    // Helper: Cek apakah data Staff adalah Security / Satpam
+    private function isSecurity($staff): bool
+    {
+        $pos = strtolower($staff->position ?? '');
+        return str_contains($pos, 'security') || str_contains($pos, 'satpam');
+    }
+
+    // Helper: Label jabatan untuk tampilan Kiosk & Rekap
+    private function getStaffRoleLabel($staff, bool $short = false): string
+    {
+        if ($this->isSecurity($staff)) {
+            return $short ? 'Security' : ($staff->position ?: 'Security / Satpam');
+        }
+        return $short ? 'Staf TU' : 'Staf TU / Tenaga Kependidikan';
+    }
+
+    // Helper: Cek apakah sudah melewati jeda 1 jam (60 menit) sejak absen masuk
+    private function canTapOut($attendance, string $todayDate): array
+    {
+        $timeIn = Carbon::parse($todayDate . ' ' . $attendance->time_in);
+        $now = Carbon::now();
+        $diffMinutes = $timeIn->diffInMinutes($now);
+
+        if ($diffMinutes < 60) {
+            $remaining = (int) ceil(60 - $diffMinutes);
+            return [
+                'allowed' => false,
+                'message' => "whopps belum waktunya pulang ya.."
+            ];
+        }
+
+        return ['allowed' => true, 'message' => ''];
+    }
+
     // Halaman Kiosk
     public function kiosk()
     {
@@ -58,6 +92,11 @@ class AttendanceController extends Controller
                 ]);
                 $msg = "Absensi Masuk berhasil ($status).";
             } else if (!$attendance->time_out) {
+                $check = $this->canTapOut($attendance, $todayDate);
+                if (!$check['allowed']) {
+                    return response()->json(['message' => $check['message']], 422);
+                }
+
                 $attendance->update([
                     'time_out' => $currentTime
                 ]);
@@ -76,10 +115,14 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // --- STAF TU / TENAGA KEPENDIDIKAN ---
+        // --- STAF TU / TENAGA KEPENDIDIKAN & SECURITY ---
         if ($staff) {
-            $standardShiftStart = '07:30:00';
-            $status = ($currentTime > $standardShiftStart) ? 'terlambat' : 'hadir';
+            $isSecurity = $this->isSecurity($staff);
+            $roleLabel = $this->getStaffRoleLabel($staff, false);
+
+            // Batas jam masuk: Security pukul 07:00:00, Staf TU pukul 07:30:00
+            $shiftStart = $isSecurity ? '07:00:00' : '07:30:00';
+            $status = ($currentTime > $shiftStart) ? 'terlambat' : 'hadir';
 
             $attendance = Attendance::where('attendable_type', Staff::class)
                 ->where('attendable_id', $staff->id)
@@ -96,19 +139,24 @@ class AttendanceController extends Controller
                 ]);
                 $msg = "Absensi Masuk berhasil ($status).";
             } else if (!$attendance->time_out) {
+                $check = $this->canTapOut($attendance, $todayDate);
+                if (!$check['allowed']) {
+                    return response()->json(['message' => $check['message']], 422);
+                }
+
                 $attendance->update([
                     'time_out' => $currentTime
                 ]);
                 $msg = "Absensi Pulang berhasil dicatat.";
             } else {
                 return response()->json([
-                    'message' => 'Staf TU sudah melakukan absensi masuk dan pulang hari ini.'
+                    'message' => ($isSecurity ? 'Petugas Security' : 'Staf TU') . ' sudah melakukan absensi masuk dan pulang hari ini.'
                 ], 422);
             }
 
             return response()->json([
                 'name' => $staff->name,
-                'role' => 'Staf TU / Tenaga Kependidikan',
+                'role' => $roleLabel,
                 'message' => $msg,
                 'time' => date('H:i')
             ]);
@@ -134,6 +182,11 @@ class AttendanceController extends Controller
                 ]);
                 $msg = "Absensi Masuk berhasil ($status).";
             } else if (!$attendance->time_out) {
+                $check = $this->canTapOut($attendance, $todayDate);
+                if (!$check['allowed']) {
+                    return response()->json(['message' => $check['message']], 422);
+                }
+
                 $attendance->update([
                     'time_out' => $currentTime
                 ]);
@@ -153,7 +206,7 @@ class AttendanceController extends Controller
         }
     }
 
-    // --- REKAP ABSENSI HARIAN (SISWA, GURU, & STAF TU) ---
+    // --- REKAP ABSENSI HARIAN (SISWA, GURU, STAF TU, & SECURITY) ---
     public function rekapIndex(Request $request)
     {
         $date = $request->input('date', Carbon::today()->toDateString());
@@ -203,7 +256,7 @@ class AttendanceController extends Controller
             ];
         }
 
-        // 3. Logika Rekap Guru & Staf TU
+        // 3. Logika Rekap Guru, Staf TU, & Security
         $teachersWithShift = Teacher::whereHas('shifts', function($q) use ($dayEnglish) {
             $q->where('day', $dayEnglish);
         })->with(['shifts' => function($q) use ($dayEnglish) {
@@ -255,7 +308,7 @@ class AttendanceController extends Controller
             ];
         }
 
-        // Masukkan Staf TU (JP otomatis 0)
+        // Masukkan Staf TU & Security (JP otomatis 0)
         foreach ($allStaff as $staff) {
             $att = $staffAttendancesToday->get($staff->id);
             $status = 'Belum Absen';
@@ -271,7 +324,7 @@ class AttendanceController extends Controller
 
             $teacherRecaps[] = [
                 'person' => $staff,
-                'role_type' => 'Staf TU',
+                'role_type' => $this->getStaffRoleLabel($staff, true),
                 'attendance' => $att,
                 'status' => $status,
                 'total_jp' => 0
@@ -302,7 +355,7 @@ class AttendanceController extends Controller
         ));
     }
 
-    // --- REKAP BULANAN / PERIODE GURU & STAF TU ---
+    // --- REKAP BULANAN / PERIODE GURU, STAF TU, & SECURITY ---
     public function rekapBulananGuru(Request $request)
     {
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
@@ -351,7 +404,7 @@ class AttendanceController extends Controller
             ];
         }
 
-        // Rekap Staf TU (JP = 0)
+        // Rekap Staf TU & Security (JP = 0)
         foreach ($staffList as $staff) {
             $sAttendances = $staffAttendances->where('attendable_id', $staff->id);
             
@@ -361,7 +414,7 @@ class AttendanceController extends Controller
 
             $rekapPerGuru[] = [
                 'person' => $staff,
-                'role_type' => 'Staf TU',
+                'role_type' => $this->getStaffRoleLabel($staff, true),
                 'total_hadir' => $totalHadirSemua,
                 'tepat_waktu' => $totalHadir,
                 'terlambat' => $totalTerlambat,
@@ -528,7 +581,7 @@ class AttendanceController extends Controller
 
                 $teacherRecaps[] = [
                     'person' => $staff,
-                    'role_type' => 'Staf TU',
+                    'role_type' => $this->getStaffRoleLabel($staff, true),
                     'attendance' => $att,
                     'status' => $status,
                     'total_jp' => 0
@@ -551,7 +604,7 @@ class AttendanceController extends Controller
         return $pdf->download('Laporan-Rekap-Absen-' . $roleFilter . '-' . $date . '.pdf');
     }
 
-    // --- EXPORT PDF REKAP BULANAN GURU & STAF TU ---
+    // --- EXPORT PDF REKAP BULANAN GURU, STAF TU, & SECURITY ---
     public function exportPdfBulananGuru(Request $request)
     {
         $startDate = $request->input('start_date', Carbon::now()->startOfMonth()->toDateString());
@@ -608,7 +661,7 @@ class AttendanceController extends Controller
 
             $rekapPerGuru[] = [
                 'person' => $staff,
-                'role_type' => 'Staf TU',
+                'role_type' => $this->getStaffRoleLabel($staff, true),
                 'total_hadir' => $totalHadirSemua,
                 'tepat_waktu' => $totalHadir,
                 'terlambat' => $totalTerlambat,

@@ -53,6 +53,11 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::put('/staff/{id}', [DataController::class, 'updateStaff'])->name('staff.update');
     Route::delete('/staff/{id}', [DataController::class, 'destroyStaff'])->name('staff.destroy');
 
+    // Manajemen Security / Satpam
+    Route::post('/security', [DataController::class, 'storeSecurity'])->name('security.store');
+    Route::put('/security/{id}', [DataController::class, 'updateSecurity'])->name('security.update');
+    Route::delete('/security/{id}', [DataController::class, 'destroySecurity'])->name('security.destroy');
+
     // Manajemen Data Kelas (Rombel)
     Route::get('/classes', [ClassController::class, 'index'])->name('classes.index');
     Route::post('/classes', [ClassController::class, 'store'])->name('classes.store');

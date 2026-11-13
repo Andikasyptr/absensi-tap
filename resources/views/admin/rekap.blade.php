@@ -10,7 +10,7 @@
                 <span class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 tracking-wider uppercase">SMK Hijau Muda</span>
             </div>
             <h2 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Rekap Absensi Harian & Jam Mengajar</h2>
-            <p class="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Pantau status kehadiran seluruh siswa, guru, & staf TU hari ini secara real-time.</p>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Pantau status kehadiran seluruh siswa, guru, staf TU, & security hari ini secara real-time.</p>
         </div>
         <div class="flex flex-wrap gap-2">
             <!-- Tombol Menuju Rekap Periode / Bulanan Siswa -->
@@ -18,10 +18,10 @@
                class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-emerald-700/20 flex items-center gap-2">
                 <span>📊</span> Siswa (Bulanan)
             </a>
-            <!-- Tombol Menuju Rekap Periode / Bulanan Guru & TU -->
+            <!-- Tombol Menuju Rekap Periode / Bulanan Guru, TU & Security -->
             <a href="{{ route('admin.rekap.bulanan.guru') }}" 
                class="px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-sky-600/20 flex items-center gap-2">
-                <span>📊</span> Guru & TU (Bulanan)
+                <span>📊</span> Guru, TU & Security (Bulanan)
             </a>
             <!-- Tombol Download Laporan PDF Harian -->
             <a :href="'{{ route('admin.rekap.pdf') }}?role=' + (activeTab === 'siswa' ? 'Siswa' : 'Guru') + '&date={{ $date }}&status={{ request('status') }}&class_name={{ request('class_name') }}'" 
@@ -50,7 +50,7 @@
             <h3 class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{{ $totalSiswa }} <span class="text-xs font-normal text-slate-400">/ {{ $totalSiswaTerdaftar ?? 0 }}</span></h3>
         </div>
         <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Guru & TU Hadir / Total</p>
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Guru, TU & Security Hadir</p>
             <h3 class="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{{ $totalGuruHadir }} <span class="text-xs font-normal text-slate-400">/ {{ $totalGuruJadwalHariIni ?? 0 }}</span></h3>
         </div>
         <div class="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -59,7 +59,7 @@
         </div>
     </div>
 
-    <!-- Filter Bar & Tab Pilihan (Siswa / Guru & TU) -->
+    <!-- Filter Bar & Tab Pilihan (Siswa / Guru, TU & Security) -->
     <div class="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row justify-between gap-4 items-center print:hidden">
         <!-- Tab Navigasi -->
         <div class="flex space-x-2 w-full lg:w-auto">
@@ -71,7 +71,7 @@
             <button @click="activeTab = 'guru'" 
                     :class="activeTab === 'guru' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'"
                     class="px-6 py-2.5 rounded-xl font-bold text-sm transition flex-1 lg:flex-none">
-                👨‍🏫 Rekap Guru & Staf TU
+                👨‍🏫 Rekap Guru, Staf TU & Security
             </button>
         </div>
 
@@ -164,10 +164,10 @@
         </div>
     </div>
 
-    <!-- ================= TABEL GURU & STAF TU ================= -->
+    <!-- ================= TABEL GURU, STAF TU & SECURITY ================= -->
     <div x-show="activeTab === 'guru'" class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors" style="display: none;">
         <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-            <h3 class="font-bold text-lg text-slate-900 dark:text-white">Status Kehadiran Guru & Staf TU Hari Ini</h3>
+            <h3 class="font-bold text-lg text-slate-900 dark:text-white">Status Kehadiran Guru, Staf TU & Security Hari Ini</h3>
             <span class="text-xs text-slate-400">Total Terdaftar: {{ count($teacherRecaps ?? []) }} Orang</span>
         </div>
         <div class="overflow-x-auto">
@@ -190,6 +190,8 @@
                         <td class="p-4">
                             @if($item['role_type'] == 'Guru')
                                 <span class="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded-lg uppercase">Guru</span>
+                            @elseif($item['role_type'] == 'Security')
+                                <span class="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-lg uppercase">🛡️ {{ $item['person']->position ?? 'Security' }}</span>
                             @else
                                 <span class="px-2.5 py-1 bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-900/50 text-sky-700 dark:text-sky-400 text-[10px] font-bold rounded-lg uppercase">{{ $item['person']->position ?? 'Staf TU' }}</span>
                             @endif
@@ -230,7 +232,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="p-8 text-center text-slate-400">Tidak ada data guru atau staf TU yang terdaftar.</td>
+                        <td colspan="7" class="p-8 text-center text-slate-400">Tidak ada data guru, staf TU, atau security yang terdaftar.</td>
                     </tr>
                     @endforelse
                 </tbody>

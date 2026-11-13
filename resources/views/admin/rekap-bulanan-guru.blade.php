@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Laporan Akumulasi Jam Mengajar Guru & Staf TU</title>
+    <title>Laporan Akumulasi Jam Mengajar Guru, Staf TU & Security</title>
     <style>
         body { font-family: 'Helvetica', 'Arial', sans-serif; color: #1e293b; font-size: 11px; line-height: 1.4; margin: 0; padding: 10px; }
         .kop-surat { width: 100%; border-bottom: 3px double #0f172a; padding-bottom: 10px; margin-bottom: 20px; text-align: center; }
@@ -62,7 +62,7 @@
 
     <!-- JUDUL -->
     <div class="judul-laporan">
-        <h3>Laporan Akumulasi Kehadiran Guru & Staf Tenaga Kependidikan (TU)</h3>
+        <h3>Laporan Akumulasi Kehadiran Guru, Staf TU & Petugas Security</h3>
         <p>Rentang Tanggal: {{ $startDate }} s.d {{ $endDate }}</p>
     </div>
 
@@ -70,8 +70,8 @@
     <table class="meta-table">
         <tr>
             <td width="20%"><strong>Kategori</strong></td>
-            <td width="30%">: Akumulasi Kehadiran & JP Guru/TU</td>
-            <td width="25%"><strong>Total Pegawai</strong></td>
+            <td width="35%">: Akumulasi Kehadiran & JP Guru / TU / Security</td>
+            <td width="20%"><strong>Total Pegawai</strong></td>
             <td width="25%">: {{ count($rekapPerGuru) }} Orang</td>
         </tr>
         <tr>
@@ -85,8 +85,8 @@
         <thead>
             <tr>
                 <th width="6%" class="text-center">No</th>
-                <th width="34%">Nama & Gelar</th>
-                <th width="15%" class="text-center">Peran / Jabatan</th>
+                <th width="32%">Nama & Gelar</th>
+                <th width="17%" class="text-center">Peran / Jabatan</th>
                 <th width="12%" class="text-center">Total Hadir</th>
                 <th width="13%" class="text-center">Tepat Waktu</th>
                 <th width="20%" class="text-center">Akumulasi Jam (JP)</th>
@@ -100,8 +100,10 @@
                 <td class="text-center">
                     @if($data['role_type'] == 'Guru')
                         <span style="color: #064e3b; font-weight: bold;">GURU</span>
+                    @elseif($data['role_type'] == 'Security')
+                        <span style="color: #b45309; font-weight: bold; text-transform: uppercase;">{{ $data['person']->position ?? 'SECURITY' }}</span>
                     @else
-                        <span style="color: #0284c7; font-weight: bold;">{{ $data['person']->position ?? 'STAF TU' }}</span>
+                        <span style="color: #0284c7; font-weight: bold; text-transform: uppercase;">{{ $data['person']->position ?? 'STAF TU' }}</span>
                     @endif
                 </td>
                 <td class="text-center">{{ $data['total_hadir'] }} Hari</td>
