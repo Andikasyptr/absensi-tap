@@ -20,7 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (config('app.env') === 'production' || request()->header('x-forwarded-proto') === 'https') {
+        // Hapus pengecekan header x-forwarded-proto agar tidak memaksa HTTPS di local
+        if (config('app.env') === 'production') {
             URL::forceScheme('https');
         }
     }

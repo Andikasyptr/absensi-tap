@@ -6,9 +6,9 @@
     RewriteEngine On
 
     # Paksa Redirect HTTP ke HTTPS
-    RewriteCond %{HTTPS} !=on
-    RewriteCond %{HTTP:X-Forwarded-Proto} !https
-    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    #RewriteCond %{HTTPS} !=on
+    #RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    #RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
@@ -28,3 +28,4 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+

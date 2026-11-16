@@ -266,4 +266,23 @@ class DataController extends Controller
 
         return redirect()->route('admin.data.index')->with('success', 'Jadwal shift berhasil dihapus!');
     }
+    // Simpan data siswa baru
+    public function storeStudent(Request $request)
+    {
+        $request->validate([
+            'nis' => 'required|unique:students,nis',
+            'name' => 'required|string|max:255',
+            'class_name' => 'required|string|max:100',
+            'rfid_uid' => 'required|string|unique:students,rfid_uid',
+        ]);
+
+        Student::create([
+            'nis' => $request->nis,
+            'name' => $request->name,
+            'class_name' => $request->class_name,
+            'rfid_uid' => $request->rfid_uid,
+        ]);
+
+        return redirect()->route('admin.data.index')->with('success', 'Data siswa berhasil disimpan!');
+    }
 }
